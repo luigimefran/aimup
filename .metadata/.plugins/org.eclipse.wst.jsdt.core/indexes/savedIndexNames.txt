@@ -1,0 +1,7 @@
+INDEX VERSION 1.4+C:\Users\luigi\workspace-aimup\.metadata\.plugins\org.eclipse.wst.jsdt.core\indexes
+3823717169.index
+1907838413.index
+2559517260.index
+1789930407.index
+2731728173.index
+2491750431.index

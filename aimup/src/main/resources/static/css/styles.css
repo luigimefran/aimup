@@ -1,0 +1,106 @@
+body {
+    background: linear-gradient(0deg, #6fbb96 0%, #23a86b 100%);
+    min-height: 100vh;
+    font-family: 'Poppins', sans-serif;
+    color: white;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .card, .menu-lateral {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+  }
+  
+  .profile-pic {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid white;
+  }
+  
+  .menu-lateral {
+    position: fixed;
+    top: 0;
+    right: -300px;
+    width: 250px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    transition: right 0.3s ease;
+    padding: 20px;
+    z-index: 999;
+  }
+  
+  .menu-lateral.open {
+    right: 0;
+  }
+  
+  .blur-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(5px);
+    background: rgba(0,0,0,0.3);
+    z-index: 998;
+    display: none;
+  }
+  
+  .blur-overlay.show {
+    display: block;
+  }
+  
+  .navbar {
+    background: transparent !important;
+  }
+  
+  .list-group-item {
+    background: transparent;
+    color: white;
+    border: none;
+  }
+  
+  .chat-box {
+    background:  3px solid #198754;
+    border-radius: 15px;
+    padding: 20px;
+    height: 70vh;
+    overflow-y: auto;
+    margin-bottom: 15px;
+  }
+  
+  .chat-message {
+    margin-bottom: 10px;
+    padding: 10px;
+    background: rgb(255, 255, 255);
+    border-radius: 10px;
+    max-width: 70%;
+    word-wrap: break-word;
+  }
+  
+  .chat-message.self {
+    background: rgba(0, 255, 150, 0.3);
+    margin-left: auto;
+    text-align: right;
+  }
+  
+  .btn {
+    transition: 0.3s;
+  }
+  
+  .btn:hover {
+    transform: scale(1.05);
+  }
+  
+  @media (max-width: 768px) {
+    .menu-lateral {
+      width: 200px;
+    }
+  }
+  
+#shareIcon {
+  color: #198754;
+}

@@ -1,0 +1,33 @@
+package com.aimup.service;
+
+import com.aimup.model.Tarefa;
+import com.aimup.model.Usuario;
+import com.aimup.repository.TarefaRepository;
+import com.aimup.repository.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class TarefaService {
+
+    @Autowired
+    private TarefaRepository tarefaRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    public List<Tarefa> getTarefasDoUsuario(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email);
+        return tarefaRepository.findByUsuario(usuario);
+    }
+
+    public int calcularProgresso(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email);
+        List<Tarefa> tarefas = tarefaRepository.findByUsuario(usuario);
+        long total = tarefas.size();
+        long concluidas = tarefas.stream().filter(Tarefa::isConcluida).count();
+        return total == 0 ? 0 : (int)((concluidas * 100) / total);
+    }
+}

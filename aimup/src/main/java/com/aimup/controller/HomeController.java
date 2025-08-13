@@ -1,0 +1,40 @@
+package com.aimup.controller;
+
+import com.aimup.model.Lembrete;
+import com.aimup.model.Tarefa;
+import com.aimup.service.LembreteService;
+import com.aimup.service.TarefaService;
+import com.aimup.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import java.security.Principal;
+import java.util.List;
+
+@Controller
+public class HomeController {
+
+    @Autowired
+    private TarefaService tarefaService;
+
+    @Autowired
+    private LembreteService lembreteService;
+
+    @Autowired
+    private UsuarioService usuarioService;
+    
+    @GetMapping("/")
+    public String index(Model model, Principal principal) {
+        String email = principal.getName();
+        List<Tarefa> tarefas = tarefaService.getTarefasDoUsuario(email);
+        List<Lembrete> lembretes = lembreteService.getLembretesDoUsuario(email);
+        int progresso = tarefaService.calcularProgresso(email);
+
+        model.addAttribute("tarefas", tarefas);
+        model.addAttribute("lembretes", lembretes);
+        model.addAttribute("progresso", progresso);
+
+        return "index/index";
+    }
+}
