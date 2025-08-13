@@ -1,5 +1,5 @@
 #Tomcat publish data
-#Wed Aug 13 09:53:18 BRT 2025
+#Wed Aug 13 10:19:41 BRT 2025
 org.eclipse.jst.jee.server\:/binary\:C\:\\Users\\luigi\\.m2\\repository\\org\\springframework\\spring-web\\6.1.5\\spring-web-6.1.5.jar=WEB-INF/lib/spring-web-6.1.5.jar
 org.eclipse.jst.jee.server\:/binary\:C\:\\Users\\luigi\\.m2\\repository\\org\\apache\\tomcat\\embed\\tomcat-embed-el\\10.1.19\\tomcat-embed-el-10.1.19.jar=WEB-INF/lib/tomcat-embed-el-10.1.19.jar
 org.eclipse.jst.jee.server\:/binary\:C\:\\Users\\luigi\\.m2\\repository\\org\\apache\\tomcat\\embed\\tomcat-embed-websocket\\10.1.19\\tomcat-embed-websocket-10.1.19.jar=WEB-INF/lib/tomcat-embed-websocket-10.1.19.jar
