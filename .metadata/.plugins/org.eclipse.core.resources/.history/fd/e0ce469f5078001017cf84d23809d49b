@@ -1,0 +1,14 @@
+package com.aimup;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class AimUpApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(AimUpApplication.class, args);
+    }
+
+	public static void main(String[] args) {
+	}
+}

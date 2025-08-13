@@ -33,7 +33,7 @@ public class UsuarioService {
 
     public void atualizarPerfil(String email, Usuario novo) {
         Usuario atual = usuarioRepository.findByEmail(email);
-        atual.setNomeUsuario(novo.getNomeUsuario());
+        atual.setNome(novo.getNome());
         atual.setFotoPerfil(novo.getFotoPerfil());
         usuarioRepository.save(atual);
     }

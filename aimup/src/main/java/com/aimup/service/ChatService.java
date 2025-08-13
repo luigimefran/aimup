@@ -21,7 +21,7 @@ public class ChatService {
     public void salvarMensagem(String emailAutor, String conteudo) {
         Usuario usuario = usuarioRepository.findByEmail(emailAutor);
         Mensagem m = new Mensagem();
-        m.setAutor(usuario.getNomeUsuario());
+        m.setAutor(usuario.getNome());
         m.setConteudo(conteudo);
         mensagemRepository.save(m);
     }
