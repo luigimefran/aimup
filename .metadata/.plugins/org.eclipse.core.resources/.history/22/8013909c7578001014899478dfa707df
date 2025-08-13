@@ -1,0 +1,72 @@
+package com.aimup.config;
+
+import com.aimup.service.CustomUserDetailsService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+public class WebSecurityConfig {
+
+    private final UsuarioDetailsService usuarioDetailsService;
+
+    public WebSecurityConfig(UsuarioDetailsService userDetailsService) {
+        this.usuarioDetailsService = userDetailsService;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        // BCrypt forte o suficiente para produção (default strength = 10)
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            // Autorização de URLs
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/login", "/cadastro", "/css/**", "/js/**", "/images/**"
+                ).permitAll()
+                .anyRequest().authenticated()
+            )
+
+            // Form login
+            .formLogin(login -> login
+                .loginPage("/login")                 // GET mostra a página
+                .loginProcessingUrl("/login")        // POST do form
+                .usernameParameter("email")          // nome do input de usuário
+                .passwordParameter("password")       // nome do input de senha
+                .defaultSuccessUrl("/", true)        // redireciona ao logar
+                .permitAll()
+            )
+
+            // Logout padrão
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout")
+                .permitAll()
+            )
+
+            // CSRF habilitado por padrão (requer token nos POSTs)
+            .csrf(Customizer.withDefaults())
+
+            // Usa nosso authenticationProvider (UserDetailsService + BCrypt)
+            .authenticationProvider(authenticationProvider(passwordEncoder()));
+
+        return http.build();
+    }
+}

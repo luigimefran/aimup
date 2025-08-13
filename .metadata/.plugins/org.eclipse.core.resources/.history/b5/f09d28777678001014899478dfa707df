@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- estilo básico opcional (pode remover se já tiver CSS) -->
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    form { max-width: 420px; display: grid; gap: 12px; }
+    label { font-weight: 600; }
+    input[type="text"], input[type="email"], input[type="password"] {
+      width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;
+    }
+    input.is-invalid { border-color: #ef4444; background: #fff6f6; }
+    .field-error { color: #b91c1c; font-size: .9rem; }
+    .alert { padding: 10px 12px; border-radius: 8px; }
+    .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .actions { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+    button { padding: 10px 14px; border: 0; border-radius: 8px; background: #111827; color: #fff; cursor: pointer; }
+    .muted { color: #6b7280; font-size: .95rem; }
+    .password-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+    .toggle { background: #e5e7eb; color: #111827; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+    .helper { color: #475569; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <h1>Criar conta</h1>
+
+  <!-- erro global vindo do controller (ex.: email já existe) -->
+  <div th:if="${erro}" th:text="${erro}" class="alert alert-error"></div>
+
+  <!-- resumo de erros Bean Validation -->
+  <div th:if="${#fields.hasAnyErrors()}" class="alert alert-error">
+    Corrija os campos destacados abaixo.
+  </div>
+
+  <form th:action="@{/cadastro}" th:object="${usuario}" method="post" novalidate>
+    <!-- CSRF obrigatório -->
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+    <div>
+      <label for="nome">Nome</label>
+      <input id="nome" type="text" th:field="*{nome}" name="nome" placeholder="Seu nome"
+             autocomplete="name" required
+             th:classappend="${#fields.hasErrors('nome')} ? 'is-invalid'"/>
+      <div th:if="${#fields.hasErrors('nome')}" th:errors="*{nome}" class="field-error"></div>
+    </div>
+
+    <div>
+      <label for="email">E-mail</label>
+      <input id="email" type="email" th:field="*{email}" name="email" placeholder="seu@email.com"
+             autocomplete="email" required
+             th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"/>
+      <div th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="field-error"></div>
+    </div>
+
+    <div>
+      <label for="senha">Senha</label>
+      <div class="password-row">
+        <!-- IMPORTANTE: o name/th:field devem bater com o atributo da entidade: 'senha' -->
+        <input id="senha" type="password" th:field="*{senha}" name="senha" placeholder="Crie uma senha"
+               autocomplete="new-password" required
+               th:classappend="${#fields.hasErrors('senha')} ? 'is-invalid'"/>
+        <button type="button" class="toggle" onclick="
+          const i=document.getElementById('senha');
+          i.type = i.type==='password' ? 'text' : 'password';
+        ">mostrar</button>
+      </div>
+      <div class="helper">Use ao menos 8 caracteres. Senhas são armazenadas criptografadas (BCrypt).</div>
+      <div th:if="${#fields.hasErrors('senha')}" th:errors="*{senha}" class="field-error"></div>
+    </div>
+
+    <div class="actions">
+      <button type="submit">Cadastrar</button>
+      <span class="muted">Já tem conta? <a th:href="@{/login}">Entrar</a></span>
+    </div>
+  </form>
+</body>
+</html>

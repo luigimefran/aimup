@@ -3,37 +3,56 @@ package com.aimup.controller;
 import com.aimup.model.Usuario;
 import com.aimup.service.UsuarioService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class AuthController {
 
-    @Autowired
-    private UsuarioService usuarioService;
+    private final UsuarioService usuarioService;
+
+    public AuthController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
+    }
+
+    @ModelAttribute("usuarioForm")
+    public Usuario prepararForm() {
+        return new Usuario();
+    }
 
     @GetMapping("/login")
     public String login() {
         return "login/login";
     }
 
-    @GetMapping("/cadastro")
-    public String cadastro(Model model) {
-        model.addAttribute("usuario", new Usuario());
+    @GetMapping({"/cadastro", "/cadastro/"})
+    public String cadastroForm() {
         return "cadastro/cadastro";
     }
 
     @PostMapping("/cadastro")
-    public String salvarCadastro(@ModelAttribute("usuario") @Valid Usuario usuario, Model model) {
-        if (usuarioService.emailExistente(usuario.getEmail())) {
-            model.addAttribute("erro", "Email já cadastrado");
+    public String cadastrar(
+            @Valid @ModelAttribute("usuarioForm") Usuario usuarioForm,
+            BindingResult result
+    ) {
+        if (result.hasErrors()) {
             return "cadastro/cadastro";
         }
-        usuarioService.salvarUsuario(usuario);
-        return "redirect:/login?sucesso";
+
+        if (usuarioService.emailExistente(usuarioForm.getEmail())) {
+            result.rejectValue("email", "email.existente", "Já existe usuário com esse e-mail.");
+            return "cadastro/cadastro";
+        }
+
+        try {
+            usuarioService.salvarUsuario(usuarioForm); // service já faz o BCrypt
+        } catch (IllegalArgumentException e) {
+            result.reject("cadastro.erro", e.getMessage());
+            return "cadastro/cadastro";
+        }
+
+        return "redirect:/login?registered";
     }
 }

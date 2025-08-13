@@ -1,0 +1,69 @@
+package com.aimup.config;
+
+import com.aimup.service.UsuarioDetailsService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class WebSecurityConfig {
+
+    private final UsuarioDetailsService usuarioDetailsService;
+
+    public WebSecurityConfig(UsuarioDetailsService usuarioDetailsService) {
+        this.usuarioDetailsService = usuarioDetailsService;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(); // BCrypt
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(usuarioDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                // PÚBLICOS (GET)
+                .requestMatchers(HttpMethod.GET, "/login", "/cadastro", "/cadastro/**").permitAll()
+                // PÚBLICOS (POST) - formulários
+                .requestMatchers(HttpMethod.POST, "/login", "/cadastro").permitAll()
+                // Recursos estáticos
+                .requestMatchers("/css/**", "/js/**", "/img/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
+                // Qualquer outra rota precisa estar autenticada
+                .anyRequest().authenticated()
+            )
+            .formLogin(login -> login
+                .loginPage("/login")               // GET da página
+                .loginProcessingUrl("/login")      // POST do form
+                .usernameParameter("email")        // seu input chama "email"
+                .passwordParameter("password")
+                .defaultSuccessUrl("/", true)
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout")
+                .permitAll()
+            )
+            // CSRF habilitado (requer input hidden nos POSTs)
+            .csrf(Customizer.withDefaults())
+            // Nosso provider (UserDetailsService + BCrypt)
+            .authenticationProvider(authenticationProvider(passwordEncoder()));
+
+        return http.build();
+    }
+}

@@ -1,0 +1,43 @@
+package com.aimup.service;
+
+import com.aimup.model.Usuario;
+import com.aimup.repository.UsuarioRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class UsuarioService {
+
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          PasswordEncoder passwordEncoder) {
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public boolean emailExistente(String email) {
+        return usuarioRepository.findByEmail(email) != null;
+    }
+
+    @Transactional
+    public Usuario salvarUsuario(Usuario usuario) {
+        if (usuario.getSenha() == null || usuario.getSenha().isBlank()) {
+            throw new IllegalArgumentException("Senha não pode ser vazia");
+        }
+        usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
+        return usuarioRepository.save(usuario);
+    }
+
+    public Usuario buscarPorEmail(String email) {
+        return usuarioRepository.findByEmail(email);
+    }
+
+    public List<Usuario> listarPorPontuacaoDesc() {
+        return usuarioRepository.findAllByOrderByPontuacaoDesc();
+    }
+}

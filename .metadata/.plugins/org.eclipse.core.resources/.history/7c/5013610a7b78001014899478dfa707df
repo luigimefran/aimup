@@ -1,0 +1,89 @@
+package com.aimup.config;
+
+import com.aimup.service.UsuarioDetailsService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
+
+@Configuration
+public class WebSecurityConfig {
+
+    private final UsuarioDetailsService usuarioDetailsService;
+
+    public WebSecurityConfig(UsuarioDetailsService usuarioDetailsService) {
+        this.usuarioDetailsService = usuarioDetailsService;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(); // BCrypt para login/cadastro
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(usuarioDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            // --- AUTORIZAÇÃO DAS ROTAS ---
+            .authorizeHttpRequests(auth -> auth
+                // Páginas públicas (GET)
+                .requestMatchers(antMatcher(HttpMethod.GET, "/login")).permitAll()
+                .requestMatchers(antMatcher(HttpMethod.GET, "/cadastro")).permitAll()
+                // Subcaminhos (se algum dia você criar /cadastro/**)
+                .requestMatchers(antMatcher("/cadastro/**")).permitAll()
+                // Ações de formulário (POST)
+                .requestMatchers(antMatcher(HttpMethod.POST, "/login")).permitAll()
+                .requestMatchers(antMatcher(HttpMethod.POST, "/cadastro")).permitAll()
+                // Estáticos
+                .requestMatchers(
+                    antMatcher("/css/**"),
+                    antMatcher("/js/**"),
+                    antMatcher("/img/**"),
+                    antMatcher("/images/**"),
+                    antMatcher("/webjars/**"),
+                    antMatcher("/favicon.ico")
+                ).permitAll()
+                // Qualquer outra rota precisa estar logado
+                .anyRequest().authenticated()
+            )
+
+            // --- LOGIN FORM ---
+            .formLogin(login -> login
+                .loginPage("/login")              // GET: mostra a página
+                .loginProcessingUrl("/login")     // POST: processa credenciais
+                .usernameParameter("email")       // seu form usa 'email'
+                .passwordParameter("password")
+                .defaultSuccessUrl("/", true)     // para onde vai após logar
+                .permitAll()
+            )
+
+            // --- LOGOUT ---
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout")
+                .permitAll()
+            )
+
+            // CSRF habilitado (requer o input hidden nos POSTs)
+            .csrf(Customizer.withDefaults())
+
+            // Autenticação com nosso UserDetailsService + BCrypt
+            .authenticationProvider(authenticationProvider(passwordEncoder()));
+
+        return http.build();
+    }
+}

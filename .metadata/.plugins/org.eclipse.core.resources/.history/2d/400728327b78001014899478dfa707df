@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ranking e Metas - AimUp</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    rel="stylesheet"
+  />
+  <link rel="shortcut icon" href="/img/Logo AimUp.png" type="image/x-icon" />
+  <style>
+    body {
+      background: linear-gradient(
+        0deg,
+        rgb(111, 187, 150) 0%,
+        rgba(35, 168, 107, 1) 100%
+      );
+      min-height: 100vh;
+      color: #fff;
+      overflow-x: hidden;
+      padding-bottom: 3rem;
+    }
+    .navbar {
+      background-color: transparent;
+      padding: 1rem;
+    }
+    .ranking-container {
+      margin-top: 100px;
+      padding: 2rem;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .top3 {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 3rem;
+      flex-wrap: wrap;
+    }
+    .top3 .user {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      padding: 1rem;
+      text-align: center;
+      width: 120px;
+      position: relative;
+    }
+    .top3 img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #fff;
+    }
+    .remove-participant-btn {
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      background: transparent;
+      border: none;
+      color: #ff6666;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    .progress-section {
+      margin-bottom: 3rem;
+    }
+    .metas-section,
+    .meta-create-section,
+    .participants-section {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2rem;
+      border-radius: 1rem;
+      margin-top: 2rem;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .meta-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .meta-item:last-child {
+      border-bottom: none;
+    }
+    .edit-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .add-meta-btn,
+    #addTaskBtn,
+    #addParticipantBtn {
+      margin-top: 1rem;
+      background-color: #23a86b;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 2rem;
+      color: #fff;
+      font-weight: bold;
+      transition: background 0.3s;
+      cursor: pointer;
+      display: block;
+      max-width: 250px;
+    }
+    .add-meta-btn:hover,
+    #addTaskBtn:hover,
+    #addParticipantBtn:hover {
+      background-color: #1d8a5a;
+    }
+    .task-item {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    label {
+      flex: 1 1 150px;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 0.4rem;
+      border-radius: 0.25rem;
+      border: none;
+      outline: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+    input[type="text"]::placeholder {
+      color: #eee;
+    }
+    .btn-danger {
+      padding: 0.3rem 0.6rem;
+    }
+    .error {
+      color: #ffbaba;
+      background-color: #5c0000;
+      padding: 0.5rem;
+      border-radius: 0.3rem;
+      margin-top: 1rem;
+      text-align: center;
+      font-weight: bold;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .participants-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+    .participant-item {
+      display: flex;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.7rem;
+      align-items: center;
+      color: #fff;
+    }
+    .participant-item button {
+      background: transparent;
+      border: none;
+      color: #ff6666;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar fixed-top d-flex justify-content-between">
+    <a href="/index/index.html" class="btn btn-outline-light">Voltar</a>
+    <img src="/img/Logo AimUp.png" alt="Logo" width="120" />
+  </nav>
+
+  <div class="ranking-container">
+    <h2 class="text-center mb-5">Ranking do Grupo</h2>
+
+    <div class="top3" id="rankingList">
+      <!-- Participantes renderizados via JS -->
+    </div>
+
+    <div class="progress-section">
+      <h5 class="fw-bold">PROGRESSO</h5>
+      <p>Início do grupo: 01/01/01</p>
+      <div class="progress">
+        <div class="progress-bar bg-success" style="width: 100%">99/99/99</div>
+      </div>
+    </div>
+
+    <div class="participants-section">
+      <h4>Participantes</h4>
+
+      <div class="participants-list" id="participantsList">
+        <!-- Lista dinâmica -->
+      </div>
+
+      <form id="addParticipantForm" class="d-flex gap-2 mt-3 flex-wrap">
+        <input
+          type="text"
+          id="participantName"
+          class="form-control"
+          placeholder="Nome do participante"
+          required
+          style="max-width: 300px;"
+        />
+        <button type="submit" id="addParticipantBtn">Adicionar Participante</button>
+      </form>
+    </div>
+
+    <div class="metas-section">
+     <h5>Descrição da Meta Geral</h5>
+<form id="metaDescriptionForm" class="mb-3">
+  <textarea
+    id="metaDescriptionInput"
+    class="form-control"
+    rows="3"
+    placeholder="Escreva aqui a meta geral do grupo..."
+    required
+  ></textarea>
+  <button type="submit" class="add-meta-btn mt-2" style="max-width: 300px;">
+    Adicionar Meta Geral
+  </button>
+</form>
+<div id="metaDescriptionDisplay" style="color: #fff; margin-top: 1rem;"></div>
+    </div>
+
+    <div class="meta-create-section">
+      <h4>Criar e Editar Tarefas</h4>
+      <form id="metaForm">
+        <div id="tasksContainer"></div>
+
+        <button type="button" id="addTaskBtn" class="btn-add-meta">
+          <i class="fas fa-plus"></i> Adicionar Tarefa
+        </button>
+
+        <button type="submit" class="add-meta-btn">Salvar Tarefa</button>
+      </form>
+
+      <div class="error" id="errorMsg" style="display: none"></div>
+
+
+    </div>
+  </div>
+
+  <script>
+    // Dados iniciais dos participantes e ranking
+    let participants = [
+      {
+        id: 1,
+        name: "Camila",
+        points: 63,
+        frequency: "Semanal",
+        avatar: "/img/foto camila.jpg",
+      },
+      {
+        id: 2,
+        name: "Duda",
+        points: 58,
+        frequency: "Semanal",
+        avatar: "/img/foto duda.jpg",
+      },
+      {
+        id: 3,
+        name: "Eloy",
+        points: 53,
+        frequency: "Semanal",
+        avatar: "/img/foto eloy.jpg",
+      },
+    ];
+
+    const metaDescriptionForm = document.getElementById("metaDescriptionForm");
+const metaDescriptionInput = document.getElementById("metaDescriptionInput");
+const metaDescriptionDisplay = document.getElementById("metaDescriptionDisplay");
+
+// Função para mostrar meta geral
+function renderMetaDescription() {
+  if (currentMeta && currentMeta.description) {
+    metaDescriptionDisplay.textContent = "Meta geral: " + currentMeta.description;
+  } else {
+    metaDescriptionDisplay.textContent = "Nenhuma meta geral definida.";
+  }
+}
+
+// Evento para salvar meta geral
+metaDescriptionForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const desc = metaDescriptionInput.value.trim();
+  if (!desc) return alert("Por favor, escreva uma meta válida.");
+
+  if (!currentMeta) currentMeta = { tasks: [] };
+  currentMeta.description = desc;
+
+  renderMetaDescription();
+
+  metaDescriptionInput.value = "";
+});
+    // Meta atual - inicialmente vazia
+    let currentMeta = null;
+
+    const rankingList = document.getElementById("rankingList");
+    const participantsList = document.getElementById("participantsList");
+    const addParticipantForm = document.getElementById("addParticipantForm");
+    const participantNameInput = document.getElementById("participantName");
+    const currentMetaDiv = document.getElementById("currentMeta");
+
+    const metaForm = document.getElementById("metaForm");
+    const tasksContainer = document.getElementById("tasksContainer");
+    const addTaskBtn = document.getElementById("addTaskBtn");
+    const errorMsg = document.getElementById("errorMsg");
+
+    // Renderiza o ranking (top 3)
+    function renderRanking() {
+      // Ordena participantes pelo points desc
+      const sorted = [...participants].sort((a, b) => b.points - a.points);
+
+      rankingList.innerHTML = "";
+
+      // Só exibe top 3
+      const top3 = sorted.slice(0, 3);
+
+      top3.forEach((p, index) => {
+        const userDiv = document.createElement("div");
+        userDiv.classList.add("user");
+
+        userDiv.innerHTML = `
+          <button class="remove-participant-btn" title="Remover participante" onclick="removeParticipant(${p.id})">
+            <i class="fas fa-times"></i>
+          </button>
+          <img src="${p.avatar}" alt="${p.name}" />
+          <h5>${index + 1}º - ${p.name}</h5>
+          <p><strong>${p.points} pontos</strong></p>
+          <small>${p.frequency}</small>
+        `;
+
+        rankingList.appendChild(userDiv);
+      });
+    }
+
+    // Renderiza lista completa de participantes
+    function renderParticipants() {
+      participantsList.innerHTML = "";
+      participants.forEach((p) => {
+        const pItem = document.createElement("div");
+        pItem.classList.add("participant-item");
+        pItem.innerHTML = `
+          <span>${p.name} (${p.points} pontos)</span>
+          <button title="Remover participante" onclick="removeParticipant(${p.id})">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+        participantsList.appendChild(pItem);
+      });
+    }
+
+    // Remove participante pelo ID
+    function removeParticipant(id) {
+      const confirmed = confirm("Tem certeza que deseja remover este participante?");
+      if (!confirmed) return;
+
+      participants = participants.filter((p) => p.id !== id);
+      renderRanking();
+      renderParticipants();
+    }
+
+    // Adiciona participante
+    addParticipantForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = participantNameInput.value.trim();
+      if (!name) return alert("Digite um nome válido");
+
+      // Adiciona com pontos e frequência default
+      const newId = participants.length
+        ? Math.max(...participants.map((p) => p.id)) + 1
+        : 1;
+
+      participants.push({
+        id: newId,
+        name,
+        points: 0,
+        frequency: "Semanal",
+        avatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png", // ícone padrão
+      });
+
+      participantNameInput.value = "";
+      renderRanking();
+      renderParticipants();
+    });
+
+    // Meta tarefas helpers
+    function createTaskElement(index, task = {}) {
+      // task = {name, points, frequency}
+      const div = document.createElement("div");
+      div.classList.add("task-item");
+      div.dataset.index = index;
+
+      div.innerHTML = `
+        <label>
+          Nome da tarefa:
+          <input type="text" name="taskName" placeholder="Ex: Caminhada" value="${task.name || ""}" required maxlength="30" />
+        </label>
+        <label>
+          Pontos:
+          <select name="taskPoints" required>
+            <option value="">Selecione</option>
+            <option value="15" ${task.points == 15 ? "selected" : ""}>15 pontos</option>
+            <option value="10" ${task.points == 10 ? "selected" : ""}>10 pontos</option>
+            <option value="5" ${task.points == 5 ? "selected" : ""}>5 pontos</option>
+          </select>
+        </label>
+        <label>
+          Frequência:
+          <select name="taskFrequency" required>
+            <option value="">Selecione</option>
+            <option value="Diária" ${task.frequency == "Diária" ? "selected" : ""}>Diária</option>
+            <option value="Semanal" ${task.frequency == "Semanal" ? "selected" : ""}>Semanal</option>
+            <option value="Mensal" ${task.frequency == "Mensal" ? "selected" : ""}>Mensal</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-danger btn-sm removeTaskBtn" title="Remover tarefa">×</button>
+      `;
+
+      // Remove tarefa
+      div.querySelector(".removeTaskBtn").addEventListener("click", () => {
+        div.remove();
+      });
+
+      return div;
+    }
+
+    // Render meta atual
+    function renderCurrentMeta() {
+      if (!currentMeta || !currentMeta.tasks.length) {
+        currentMetaDiv.innerHTML = "<p>Nenhuma meta definida ainda.</p>";
+        return;
+      }
+
+      let html = `<ul class="list-group text-dark">`;
+
+      currentMeta.tasks.forEach((t, i) => {
+        html += `
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span><strong>${t.name}</strong> - ${t.points} pontos - ${t.frequency}</span>
+          </li>`;
+      });
+
+      html += "</ul>";
+      currentMetaDiv.innerHTML = html;
+    }
+
+    // Valida limites das tarefas conforme regras:
+    // 2 tarefas = 15 pontos max
+    // 3 tarefas = 10 pontos max
+    // 2 tarefas = 5 pontos max
+    function validateTasks(tasks) {
+      if (tasks.length > 7) return "Limite máximo de 7 tarefas.";
+
+      // Contar quantas tarefas para cada valor
+      const count15 = tasks.filter((t) => t.points == 15).length;
+      const count10 = tasks.filter((t) => t.points == 10).length;
+      const count5 = tasks.filter((t) => t.points == 5).length;
+
+      if (count15 > 2) return "No máximo 2 tarefas de 15 pontos.";
+      if (count10 > 3) return "No máximo 3 tarefas de 10 pontos.";
+      if (count5 > 2) return "No máximo 2 tarefas de 5 pontos.";
+
+      // Verificar que todas as tarefas têm nome e frequência
+      for (const t of tasks) {
+        if (!t.name || !t.points || !t.frequency) {
+          return "Todas as tarefas precisam ter nome, pontos e frequência definidos.";
+        }
+      }
+
+      return null;
+    }
+
+    // Adiciona nova tarefa no formulário
+    addTaskBtn.addEventListener("click", () => {
+      const currentTasksCount = tasksContainer.children.length;
+      if (currentTasksCount >= 7) {
+        alert("Limite máximo de 7 tarefas.");
+        return;
+      }
+
+      const taskEl = createTaskElement(currentTasksCount);
+      tasksContainer.appendChild(taskEl);
+    });
+
+    // Salva meta
+    metaForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const tasksEls = [...tasksContainer.children];
+      const tasks = tasksEls.map((div) => {
+        return {
+          name: div.querySelector('input[name="taskName"]').value.trim(),
+          points: parseInt(div.querySelector('select[name="taskPoints"]').value),
+          frequency: div.querySelector('select[name="taskFrequency"]').value,
+        };
+      });
+
+      const validationError = validateTasks(tasks);
+      if (validationError) {
+        errorMsg.style.display = "block";
+        errorMsg.textContent = validationError;
+        return;
+      }
+
+      errorMsg.style.display = "none";
+
+      currentMeta = { tasks };
+      renderCurrentMeta();
+
+      // Limpa formulário
+      tasksContainer.innerHTML = "";
+    });
+
+    // Inicialização
+    renderRanking();
+    renderParticipants();
+    renderCurrentMeta();
+  </script>
+</body>
+</html>
