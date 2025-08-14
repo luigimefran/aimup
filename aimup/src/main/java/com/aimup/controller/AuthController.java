@@ -2,6 +2,8 @@ package com.aimup.controller;
 
 import com.aimup.model.Usuario;
 import com.aimup.service.UsuarioService;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -57,7 +59,30 @@ public class AuthController {
     }
     
     @GetMapping("/esqueceuSenha")
-    public String esqueceuSenha() {
-        return "esqueceuSenha/esqueceuSenha"; 
+    public String esqueceuSenhaForm(Model model,
+                                    @RequestParam(value = "sent", required = false) String sent) {
+        model.addAttribute("sent", sent != null);
+        return "esqueceuSenha/esqueceuSenha";
+    }
+
+    @PostMapping("/esqueceuSenha")
+    public String processaEsqueceuSenha(@RequestParam("email") String email,
+                                        HttpServletRequest request) {
+
+    	String token = java.util.UUID.randomUUID().toString();
+
+        String baseUrl = request.getRequestURL().toString().replace(request.getRequestURI(), "");
+        String link = baseUrl + "/reset-senha?token=" + token;
+
+        System.out.println("Enviando email de reset para: " + email);
+        System.out.println("Link de redefinição: " + link);
+
+        return "redirect:/esqueceuSenha?sent=1";
+    }
+
+    @GetMapping("/reset-senha")
+    public String resetSenha(@RequestParam("token") String token, Model model) {
+        model.addAttribute("token", token);
+        return "esqueceuSenha/resetSenhaDemo"; 
     }
 }
