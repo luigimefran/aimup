@@ -55,4 +55,9 @@ public class AuthController {
 
         return "redirect:/login?registered";
     }
+    
+    @GetMapping("/esqueceuSenha")
+    public String esqueceuSenha() {
+        return "esqueceuSenha/esqueceuSenha"; 
+    }
 }

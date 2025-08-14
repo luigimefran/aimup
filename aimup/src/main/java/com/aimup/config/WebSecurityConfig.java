@@ -42,7 +42,7 @@ public class WebSecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/login", "/cadastro", "/cadastro/**",
+                    "/login", "/cadastro", "/cadastro/**", "/esqueceuSenha",
                     "/css/**", "/js/**", "/img/**", "/images/**", "/webjars/**", "/favicon.ico"
                 ).permitAll()
                 .anyRequest().authenticated()

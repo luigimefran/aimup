@@ -1,0 +1,58 @@
+package com.aimup.controller;
+
+import com.aimup.model.Usuario;
+import com.aimup.service.UsuarioService;
+import jakarta.validation.Valid;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+public class AuthController {
+
+    private final UsuarioService usuarioService;
+
+    public AuthController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
+    }
+
+    @ModelAttribute("usuarioForm")
+    public Usuario prepararForm() {
+        return new Usuario();
+    }
+
+    @GetMapping("/login")
+    public String login() {
+        return "login/login";
+    }
+
+    @GetMapping({"/cadastro", "/cadastro/"})
+    public String cadastroForm() {
+        return "cadastro/cadastro";
+    }
+
+    @PostMapping("/cadastro")
+    public String cadastrar(
+            @Valid @ModelAttribute("usuarioForm") Usuario usuarioForm,
+            BindingResult result
+    ) {
+        if (result.hasErrors()) {
+            return "cadastro/cadastro";
+        }
+
+        if (usuarioService.emailExistente(usuarioForm.getEmail())) {
+            result.rejectValue("email", "email.existente", "Já existe usuário com esse e-mail.");
+            return "cadastro/cadastro";
+        }
+
+        try {
+            usuarioService.salvarUsuario(usuarioForm); // service já faz o BCrypt
+        } catch (IllegalArgumentException e) {
+            result.reject("cadastro.erro", e.getMessage());
+            return "cadastro/cadastro";
+        }
+
+        return "redirect:/login?registered";
+    }
+}
