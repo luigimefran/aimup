@@ -1,6 +1,7 @@
 package com.aimup.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 public class Usuario {
@@ -19,6 +20,11 @@ public class Usuario {
     private String fotoPerfil;
 
     private int pontuacao;
+    
+    @Column(nullable = false)
+    private Double imc = 0.0; // valor inicial 0.0 até calcular
+    
+    private LocalDateTime imcUpdatedAt; // opcional: quando foi atualizado pela última vez
 
     // Getters e Setters
 
@@ -68,5 +74,21 @@ public class Usuario {
 
     public void setPontuacao(int pontuacao) {
         this.pontuacao = pontuacao;
+    }
+
+    public Double getImc() {
+        return imc;
+    }
+
+    public void setImc(Double imc) {
+        this.imc = imc;
+    }
+
+    public LocalDateTime getImcUpdatedAt() {
+        return imcUpdatedAt;
+    }
+
+    public void setImcUpdatedAt(LocalDateTime imcUpdatedAt) {
+        this.imcUpdatedAt = imcUpdatedAt;
     }
 }

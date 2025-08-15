@@ -1,4 +1,3 @@
-
 package com.aimup.repository;
 
 import com.aimup.model.Usuario;

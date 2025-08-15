@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
-
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,79 +9,94 @@
   <link rel="shortcut icon" href="/img/LogoAimUp.png" type="image/x-icon">
 
   <style>
-    ::placeholder {
-      color: white !important;
-      opacity: 1;
-    }
-
+    ::placeholder { color: white !important; opacity: 1; }
     body {
-      background: rgb(76, 132, 105);
-      background: linear-gradient(0deg, rgb(111, 187, 150) 0%, rgba(35, 168, 107, 1) 100%);
+      background: linear-gradient(0deg, rgb(111,187,150) 0%, rgba(35,168,107,1) 100%);
     }
-
     .container {
-      max-width: 500px;
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.1);
+      max-width: 480px;
+      padding: 16px 18px;                /* compacto */
+      background: rgba(255,255,255,0.1);
       border-radius: 20px;
       color: #fff;
       backdrop-filter: blur(5px);
       -webkit-backdrop-filter: blur(5px);
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
     }
-
+    .logo-aimup {
+      width: 180px;
+      display: block;
+      margin: 0 auto 8px auto;
+    }
+    h1 { margin-bottom: 10px !important; }
     .form-control {
       border-radius: 20px;
       background: none;
       border-width: 3px;
       color: #fff;
     }
-
-    .btn-custom {
-      background-color: #fff;
-      border-radius: 20px;
-      border-color: #fff;
-      color: rgb(111, 187, 150);
-    }
-
-    .btn-custom:hover {
-      background-color: rgb(111, 187, 150);
-      color: #fff;
-    }
+    .btn-rounded { border-radius: 20px; }
   </style>
 </head>
 
-<body class="d-flex align-items-center justify-content-center vh-100">
+<body class="d-flex justify-content-center py-4">
   <nav class="navbar navbar-light position-absolute top-0 start-0 m-3">
-    <a href="/perfil" class="btn btn-outline-light">Voltar</a>
+    <!-- Voltar igual antes -->
+    <a th:href="@{/perfil}" class="btn btn-outline-light">Voltar</a>
   </nav>
 
   <div class="container">
-    <img src="/img/LogoAimUp.png" alt="Logo AimUp" style="width: 250px; display: block; margin: 0 auto;">
-    <h1 class="text-center mb-4">Cálculo de IMC</h1>
-    <form id="formIMC">
+    <!-- logo -->
+    <img src="/img/LogoAimUp.png" alt="Logo AimUp" class="logo-aimup">
+    <h1 class="text-center mb-3">Cálculo de IMC</h1>
+
+    <!-- alertas -->
+    <div th:if="${mensagem}" class="alert alert-success" th:text="${mensagem}"></div>
+    <div th:if="${erro}" class="alert alert-danger" th:text="${erro}"></div>
+
+    <!-- IMC atual salvo (0.00 se nunca calculou) -->
+    <div class="text-center mb-3">
+      <p class="mb-0">Seu IMC atual:</p>
+      <h4><span th:text="${#numbers.formatDecimal(imcAtual,1,2)}">0.00</span></h4>
+    </div>
+
+    <!-- formulário: envia para /imc/calcular (com CSRF) -->
+    <form id="formIMC" th:action="@{/imc/calcular}" method="post">
       <div class="mb-3">
         <label for="peso" class="form-label">Peso (kg)</label>
-        <input type="number" class="form-control" id="peso" placeholder="Insira seu peso em kg" required>
+        <input type="number" class="form-control" id="peso" name="peso"
+               placeholder="Insira seu peso em kg" step="0.01" min="1" required>
       </div>
+
       <div class="mb-3">
-        <label for="altura" class="form-label">Altura (cm)</label>
-        <input type="number" class="form-control" id="altura" placeholder="Insira sua altura em cm" required>
+        <label for="alturaCm" class="form-label">Altura (cm)</label>
+        <!-- campo visível em cm -->
+        <input type="number" class="form-control" id="alturaCm"
+               placeholder="Insira sua altura em cm" step="0.1" min="30" required>
+        <!-- campo oculto em metros que será enviado ao backend -->
+        <input type="hidden" id="altura" name="altura">
       </div>
+
       <div class="mb-3">
         <label class="form-label">Sexo</label>
         <div class="form-check">
-          <input class="form-check-input" type="radio" name="sexo" id="masculino" value="masculino">
+          <input class="form-check-input" type="radio" name="sexo" id="masculino" value="masculino" checked>
           <label class="form-check-label" for="masculino">Masculino</label>
         </div>
         <div class="form-check">
-          <input class="form-check-input" type="radio" name="sexo" id="feminino" value="feminino" checked>
+          <input class="form-check-input" type="radio" name="sexo" id="feminino" value="feminino">
           <label class="form-check-label" for="feminino">Feminino</label>
         </div>
       </div>
-      <button type="submit" class="btn btn-custom w-100">Calcular</button>
+
+      <!-- CSRF -->
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+      <!-- Botão verde com texto branco (como antes) -->
+      <button type="submit" class="btn btn-success w-100 btn-rounded">Calcular e Salvar</button>
     </form>
 
+    <!-- resultado imediato no front (opcional) -->
     <div id="resultado" class="mt-3 text-center" style="display: none;">
       <h4 class="text-white">Seu IMC é: <span id="imcValue"></span></h4>
       <p id="resultadoCategoria" class="text-white"></p>
@@ -90,40 +104,37 @@
   </div>
 
   <script>
-    document.getElementById("formIMC").addEventListener("submit", function (event) {
-      event.preventDefault();
+    const form = document.getElementById("formIMC");
+    const pesoEl = document.getElementById("peso");
+    const alturaCmEl = document.getElementById("alturaCm");
+    const alturaHiddenEl = document.getElementById("altura");
 
-      const peso = parseFloat(document.getElementById("peso").value.replace(",", "."));
-      const altura = parseFloat(document.getElementById("altura").value) / 100;
+    const imcBox = document.getElementById("resultado");
+    const imcValueEl = document.getElementById("imcValue");
+    const categoriaEl = document.getElementById("resultadoCategoria");
 
-      if (isNaN(peso) || isNaN(altura) || altura === 0) {
-        alert("Por favor, insira valores válidos para peso e altura.");
-        return;
-      }
+    form.addEventListener("submit", function () {
+      // converter cm -> m e injetar no campo oculto "altura" que o backend espera
+      const peso = parseFloat(String(pesoEl.value).replace(",", "."));
+      const alturaCm = parseFloat(String(alturaCmEl.value).replace(",", "."));
+      const alturaM = alturaCm / 100.0;
+      alturaHiddenEl.value = alturaM.toFixed(3); // envia em metros
 
-      const imc = peso / (altura * altura);
-      const imcValue = document.getElementById("imcValue");
-      const resultadoCategoria = document.getElementById("resultadoCategoria");
-
-      imcValue.textContent = imc.toFixed(2);
+      // (opcional) preview imediato
+      const imc = peso / (alturaM * alturaM);
+      imcValueEl.textContent = isFinite(imc) ? imc.toFixed(2) : '';
 
       let categoria = "";
-      if (imc < 18.5) {
-        categoria = "Abaixo do peso";
-      } else if (imc >= 18.5 && imc < 24.9) {
-        categoria = "Peso normal";
-      } else if (imc >= 25 && imc < 29.9) {
-        categoria = "Sobrepeso";
-      } else if (imc >= 30 && imc < 39.9) {
-        categoria = "Obesidade";
-      } else {
-        categoria = "Obesidade grave";
-      }
+      if (imc < 18.5) categoria = "Abaixo do peso";
+      else if (imc < 24.9) categoria = "Peso normal";
+      else if (imc < 29.9) categoria = "Sobrepeso";
+      else if (imc < 39.9) categoria = "Obesidade";
+      else categoria = "Obesidade grave";
+      categoriaEl.textContent = categoria;
 
-      resultadoCategoria.textContent = categoria;
-      document.getElementById("resultado").style.display = "block";
+      imcBox.style.display = "block";
+      // submit prossegue; backend salva e redireciona para /perfil
     });
   </script>
 </body>
-
 </html>

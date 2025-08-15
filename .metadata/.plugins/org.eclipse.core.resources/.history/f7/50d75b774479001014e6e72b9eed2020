@@ -1,0 +1,5 @@
+package com.aimup.dto;
+
+public class ImcForm {
+
+}

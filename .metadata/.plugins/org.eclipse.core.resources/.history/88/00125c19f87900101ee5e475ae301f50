@@ -1,0 +1,62 @@
+package com.aimup.controller;
+
+import com.aimup.model.Usuario;
+import com.aimup.repository.UsuarioRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@Controller
+public class ImcController {
+
+    private final UsuarioRepository usuarioRepository;
+
+    public ImcController(UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    /** Recupera o usuário logado (assumindo que o username é o e-mail). */
+    private Usuario getUsuarioLogado() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        Usuario u = usuarioRepository.findByEmail(email);
+        if (u == null) {
+            throw new IllegalStateException("Usuário logado não encontrado pelo e-mail: " + email);
+        }
+        return u;
+    }
+
+    @GetMapping("/imc")
+    public String mostrarFormulario(Model model) {
+        Usuario u = getUsuarioLogado();
+        Double imcAtual = (u.getImc() == null ? 0.0 : u.getImc());
+        model.addAttribute("imcAtual", imcAtual);
+        return "calculoImc/calculoImc";
+    }
+
+    @PostMapping("/imc/calcular")
+    @Transactional
+    public String calcularIMC(@RequestParam double altura,  
+                              @RequestParam double peso,    
+                              RedirectAttributes ra) {
+        if (altura <= 0 || peso <= 0) {
+            ra.addFlashAttribute("erro", "Altura e peso devem ser maiores que zero.");
+            return "redirect:/imc";
+        }
+
+        double imc = peso / (altura * altura);
+        imc = Math.round(imc * 100.0) / 100.0; 
+
+        Usuario u = getUsuarioLogado();
+        u.setImc(imc);
+        usuarioRepository.save(u);
+
+        ra.addFlashAttribute("mensagemPerfil", "IMC atualizado com sucesso: " + imc);
+        return "redirect:/perfil";
+    }
+}
