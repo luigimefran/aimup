@@ -1,0 +1,5 @@
+package com.aimup.config;
+
+public class StaticResourceConfig {
+
+}

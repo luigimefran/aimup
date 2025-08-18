@@ -1,0 +1,60 @@
+package com.aimup.controller;
+
+import com.aimup.model.Lembrete;
+import com.aimup.model.Usuario;
+import com.aimup.repository.LembreteRepository;
+import com.aimup.service.UsuarioService;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.security.Principal;
+import java.time.LocalDateTime;
+
+@Controller
+@RequestMapping("/lembretes")
+public class LembreteController {
+
+    private final LembreteRepository repo;
+    private final UsuarioService usuarioService;
+
+    public LembreteController(LembreteRepository repo, UsuarioService usuarioService) {
+        this.repo = repo;
+        this.usuarioService = usuarioService;
+    }
+
+    @PostMapping("/salvar")
+    public String salvar(@RequestParam String titulo,
+                         @RequestParam String descricao,
+                         @RequestParam String dataHora,
+                         Principal principal,
+                         RedirectAttributes ra) {
+        try {
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            Lembrete l = new Lembrete();
+            l.setTitulo(titulo);
+            l.setDescricao(descricao);
+            l.setDataHora(LocalDateTime.parse(dataHora));
+            l.setUsuario(u);
+            repo.save(l);
+            ra.addFlashAttribute("ok", "Lembrete salvo!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro: " + e.getMessage());
+        }
+        return "redirect:/";
+    }
+
+    @PostMapping("/{id}/excluir")
+    public String excluir(@PathVariable Long id, Principal principal, RedirectAttributes ra) {
+        try {
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            repo.findById(id).ifPresent(l -> {
+                if (l.getUsuario().getId().equals(u.getId())) repo.delete(l);
+            });
+            ra.addFlashAttribute("ok", "Excluído!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro: " + e.getMessage());
+        }
+        return "redirect:/";
+    }
+}

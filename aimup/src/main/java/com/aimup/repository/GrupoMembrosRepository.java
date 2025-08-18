@@ -1,0 +1,14 @@
+package com.aimup.repository;
+
+import com.aimup.model.GrupoMembro;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface GrupoMembrosRepository extends JpaRepository<GrupoMembro, Long> {
+    Optional<GrupoMembro> findByGrupoIdAndUsuarioId(Long grupoId, Long usuarioId);
+    List<GrupoMembro> findByUsuarioId(Long usuarioId);
+    boolean existsByGrupoIdAndUsuarioId(Long grupoId, Long usuarioId);
+    long countByGrupoId(Long grupoId);
+}

@@ -1,0 +1,63 @@
+package com.aimup.controller;
+
+import com.aimup.model.Grupo;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Lembrete;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.repository.GrupoRepository;
+import com.aimup.service.LembreteService;
+import com.aimup.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Controller
+public class HomeController {
+
+    @Autowired
+    private LembreteService lembreteService;
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private GrupoMembrosRepository grupoMembroRepository;
+
+    @Autowired(required = false)
+    private GrupoRepository grupoRepository;
+
+    @GetMapping("/")
+    public String index(Model model, Principal principal) {
+        String email = principal.getName();
+
+        Usuario usuario = usuarioService.buscarPorEmail(email);
+        if (usuario == null) {
+            throw new IllegalStateException("Usuário não encontrado: " + email);
+        }
+
+        List<GrupoMembro> membros = grupoMembroRepository.findByUsuarioId(usuario.getId());
+
+        List<Grupo> grupos = membros.stream()
+                .map(GrupoMembro::getGrupo)
+                .collect(Collectors.toList());
+
+        List<Lembrete> lembretes = lembreteService.getLembretesDoUsuario(email);
+
+        model.addAttribute("usuario", usuario);
+        model.addAttribute("grupos", grupos);
+        model.addAttribute("lembretes", lembretes);
+
+     
+        if (grupos.size() == 1) {
+        	return "redirect:/tarefas/grupo/" + grupos.get(0).getId();
+        }
+
+        return "index/index"; 
+    }
+}

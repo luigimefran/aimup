@@ -1,0 +1,367 @@
+package com.aimup.controller;
+
+import com.aimup.model.Grupo;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Tarefa;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.repository.GrupoRepository;
+import com.aimup.repository.TarefaRepository;
+import com.aimup.service.GrupoService;
+import com.aimup.service.UsuarioService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+@Controller
+@RequestMapping("/grupos")
+public class GrupoController {
+
+    private final GrupoService grupoService;
+    private final GrupoRepository grupoRepo;
+    private final GrupoMembrosRepository membroRepo;
+    private final UsuarioService usuarioService;
+    private final TarefaRepository tarefaRepo;
+
+    public GrupoController(GrupoService grupoService,
+                           GrupoRepository grupoRepo,
+                           GrupoMembrosRepository membroRepo,
+                           UsuarioService usuarioService,
+                           TarefaRepository tarefaRepo) {
+        this.grupoService = grupoService;
+        this.grupoRepo = grupoRepo;
+        this.membroRepo = membroRepo;
+        this.usuarioService = usuarioService;
+        this.tarefaRepo = tarefaRepo;
+    }
+
+    // LISTA + EMPTY STATE + BUSCA
+    @GetMapping
+    public String listarMeusGrupos(@RequestParam(value = "q", required = false) String q,
+                                   Model model,
+                                   Principal principal,
+                                   RedirectAttributes ra) {
+        try {
+            if (principal == null) {
+                ra.addFlashAttribute("erro", "Sessão expirada. Faça login novamente.");
+                return "redirect:/login";
+            }
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (u == null) {
+                ra.addFlashAttribute("erro", "Usuário não encontrado. Faça login novamente.");
+                return "redirect:/login";
+            }
+
+            List<GrupoMembro> membros = membroRepo.findByUsuarioId(u.getId());
+            List<Grupo> grupos = membros.stream().map(GrupoMembro::getGrupo).toList();
+
+            List<Grupo> resultados = (q == null || q.isBlank())
+                    ? Collections.emptyList()
+                    : grupoService.buscarPorNome(q);
+
+            model.addAttribute("usuario", u);
+            model.addAttribute("grupos", grupos);
+            model.addAttribute("q", q == null ? "" : q);
+            model.addAttribute("resultados", resultados);
+            return "grupo/lista";
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro ao carregar grupos: " + e.getMessage());
+            return "redirect:/";
+        }
+    }
+
+    // ENTRAR EM UM GRUPO (via busca)
+    @PostMapping("/entrar")
+    public String entrar(@RequestParam Long grupoId,
+                         Principal principal,
+                         RedirectAttributes ra) {
+        try {
+            if (principal == null) {
+                ra.addFlashAttribute("erro", "Sessão expirada. Faça login novamente.");
+                return "redirect:/login";
+            }
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (u == null) {
+                ra.addFlashAttribute("erro", "Usuário não encontrado. Faça login novamente.");
+                return "redirect:/login";
+            }
+            grupoService.entrarNoGrupo(grupoId, u);
+            return "redirect:/grupos/" + grupoId;
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Não foi possível entrar no grupo: " + e.getMessage());
+            return "redirect:/grupos";
+        }
+    }
+
+    // DETALHE DO GRUPO
+    @GetMapping("/{grupoId}")
+    public String detalharGrupo(@PathVariable Long grupoId,
+                                Principal principal,
+                                Model model,
+                                RedirectAttributes ra) {
+        try {
+            if (principal == null) {
+                ra.addFlashAttribute("erro", "Sessão expirada. Faça login novamente.");
+                return "redirect:/login";
+            }
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (u == null) {
+                ra.addFlashAttribute("erro", "Usuário não encontrado. Faça login novamente.");
+                return "redirect:/login";
+            }
+
+            // garante que é membro
+            if (membroRepo.findByGrupoIdAndUsuarioId(grupoId, u.getId()).isEmpty()) {
+                ra.addFlashAttribute("erro", "Você não pertence a este grupo.");
+                return "redirect:/grupos";
+            }
+
+            Grupo g = grupoRepo.findById(grupoId).orElse(null);
+            if (g == null) {
+                ra.addFlashAttribute("erro", "Grupo não encontrado.");
+                return "redirect:/grupos";
+            }
+
+            GrupoMembro membro = membroRepo.findByGrupoIdAndUsuarioId(grupoId, u.getId()).orElseThrow();
+            model.addAttribute("grupo", g);
+            model.addAttribute("papel", membro.getPapel());
+            return "grupo/detalhe";
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro ao abrir grupo: " + e.getMessage());
+            return "redirect:/grupos";
+        }
+    }
+
+    // FORM DE CRIAÇÃO
+    @GetMapping("/criar-form")
+    public String criarForm() {
+        return "grupo/criar";
+    }
+
+    // CRIAR GRUPO + TAREFAS
+    @PostMapping("/criar")
+    public String criar(@RequestParam String nome,
+                        @RequestParam(required = false) String metaTitulo,
+                        @RequestParam(required = false) String metaDescricao,
+                        @RequestParam(name = "tTitulo", required = false) List<String> tTitulos,
+                        @RequestParam(name = "tPontos", required = false) List<String> tPontos,
+                        @RequestParam(name = "tFreq",   required = false) List<String> tFreq,
+                        Principal principal,
+                        RedirectAttributes ra) {
+        try {
+            if (nome == null || nome.isBlank()) {
+                ra.addFlashAttribute("erro", "Informe o nome do grupo.");
+                return "redirect:/grupos/criar-form";
+            }
+            if (principal == null) {
+                ra.addFlashAttribute("erro", "Sessão expirada. Faça login novamente.");
+                return "redirect:/login";
+            }
+
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (u == null) {
+                ra.addFlashAttribute("erro", "Usuário não encontrado. Faça login novamente.");
+                return "redirect:/login";
+            }
+
+            List<Tarefa> tarefas = new ArrayList<>();
+            if (tTitulos != null) {
+                for (int i = 0; i < tTitulos.size(); i++) {
+                    String tt = tTitulos.get(i);
+                    if (tt == null || tt.isBlank()) continue;
+
+                    // pontos com fallback
+                    Integer pts = 5;
+                    if (tPontos != null && i < tPontos.size()) {
+                        try {
+                            String raw = tPontos.get(i);
+                            if (raw != null && !raw.isBlank()) {
+                                pts = Integer.parseInt(raw.trim());
+                                if (pts < 1) pts = 1;
+                            }
+                        } catch (Exception ignored) { /* mantém 5 */ }
+                    }
+
+                    // frequência com fallback
+                    String fStr = (tFreq != null && i < tFreq.size() && tFreq.get(i) != null && !tFreq.get(i).isBlank())
+                            ? tFreq.get(i).trim().toUpperCase()
+                            : "SEMANAL";
+                    Tarefa.Frequencia freq;
+                    try {
+                        freq = Tarefa.Frequencia.valueOf(fStr);
+                    } catch (Exception e) {
+                        freq = Tarefa.Frequencia.SEMANAL;
+                    }
+
+                    Tarefa t = new Tarefa();
+                    t.setTitulo(tt.trim());
+                    t.setDescricao(null);
+                    t.setPontos(pts);
+                    t.setFrequencia(freq);
+                    t.setAtiva(true);
+                    tarefas.add(t);
+                }
+            }
+
+            Grupo g = grupoService.criarGrupoComTarefas(nome.trim(), metaTitulo, metaDescricao, u, tarefas);
+            ra.addFlashAttribute("ok", "Grupo criado com sucesso!");
+            return "redirect:/grupos/" + g.getId();
+
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            ra.addFlashAttribute("erro", "Já existe um grupo com esse nome. Tente outro.");
+            return "redirect:/grupos/criar-form";
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro ao criar grupo: " + e.getMessage());
+            return "redirect:/grupos/criar-form";
+        }
+    }
+
+    // EDITAR COMPLETO (somente ADMIN) - FORM
+    @GetMapping("/{grupoId}/editar")
+    public String editarForm(@PathVariable Long grupoId,
+                             Principal principal,
+                             Model model,
+                             RedirectAttributes ra) {
+        try {
+            if (principal == null) {
+                ra.addFlashAttribute("erro", "Sessão expirada. Faça login novamente.");
+                return "redirect:/login";
+            }
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (u == null) {
+                ra.addFlashAttribute("erro", "Usuário não encontrado. Faça login novamente.");
+                return "redirect:/login";
+            }
+
+            var gmOpt = membroRepo.findByGrupoIdAndUsuarioId(grupoId, u.getId());
+            if (gmOpt.isEmpty()) {
+                ra.addFlashAttribute("erro", "Você não pertence a este grupo.");
+                return "redirect:/grupos";
+            }
+            if (gmOpt.get().getPapel() != GrupoMembro.PapelNoGrupo.ADMIN) {
+                ra.addFlashAttribute("erro", "Apenas ADMIN pode editar o grupo.");
+                return "redirect:/grupos/" + grupoId;
+            }
+
+            Grupo g = grupoRepo.findById(grupoId).orElse(null);
+            if (g == null) {
+                ra.addFlashAttribute("erro", "Grupo não encontrado.");
+                return "redirect:/grupos";
+            }
+
+            var tarefas = tarefaRepo.findByGrupoIdAndAtivaTrueOrderByIdAsc(grupoId);
+
+            model.addAttribute("grupo", g);
+            model.addAttribute("tarefas", tarefas);
+            return "grupo/editar";
+
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro ao abrir edição: " + e.getMessage());
+            return "redirect:/grupos";
+        }
+    }
+
+    // EDITAR COMPLETO (somente ADMIN) - SUBMIT
+    @PostMapping("/{grupoId}/atualizar")
+    public String atualizar(@PathVariable Long grupoId,
+                            @RequestParam String nome,
+                            @RequestParam(required = false) String metaTitulo,
+                            @RequestParam(required = false) String metaDescricao,
+                            @RequestParam(name = "tId", required = false) List<Long> tIds,
+                            @RequestParam(name = "tTitulo", required = false) List<String> tTitulos,
+                            @RequestParam(name = "tDesc", required = false) List<String> tDescs,
+                            @RequestParam(name = "tPontos", required = false) List<String> tPontos,
+                            @RequestParam(name = "tFreq", required = false) List<String> tFreq,
+                            @RequestParam(name = "removerId", required = false) List<Long> removerIds,
+                            Principal principal,
+                            RedirectAttributes ra) {
+        try {
+            if (principal == null) {
+                ra.addFlashAttribute("erro", "Sessão expirada. Faça login novamente.");
+                return "redirect:/login";
+            }
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (u == null) {
+                ra.addFlashAttribute("erro", "Usuário não encontrado. Faça login novamente.");
+                return "redirect:/login";
+            }
+
+            // monta lista de upserts de tarefas (parse seguro)
+            List<Tarefa> upserts = new ArrayList<>();
+            int n = (tTitulos == null) ? 0 : tTitulos.size();
+            for (int i = 0; i < n; i++) {
+                String titulo = tTitulos.get(i);
+                if (titulo == null || titulo.isBlank()) continue;
+
+                Tarefa t = new Tarefa();
+                if (tIds != null && i < tIds.size()) t.setId(tIds.get(i));
+                t.setTitulo(titulo.trim());
+                t.setDescricao((tDescs != null && i < tDescs.size()) ? tDescs.get(i) : null);
+
+                Integer pts = 5;
+                if (tPontos != null && i < tPontos.size()) {
+                    try {
+                        String raw = tPontos.get(i);
+                        if (raw != null && !raw.isBlank()) pts = Integer.parseInt(raw.trim());
+                    } catch (Exception ignored) {}
+                }
+                t.setPontos(pts);
+
+                Tarefa.Frequencia freq = Tarefa.Frequencia.SEMANAL;
+                if (tFreq != null && i < tFreq.size() && tFreq.get(i) != null && !tFreq.get(i).isBlank()) {
+                    try {
+                        freq = Tarefa.Frequencia.valueOf(tFreq.get(i).trim().toUpperCase());
+                    } catch (Exception ignored) {}
+                }
+                t.setFrequencia(freq);
+
+                upserts.add(t);
+            }
+
+            grupoService.atualizarGrupoComTarefas(grupoId, u, nome, metaTitulo, metaDescricao, upserts, removerIds);
+            ra.addFlashAttribute("ok", "Grupo atualizado com sucesso!");
+            return "redirect:/grupos/" + grupoId + "/editar";
+
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            ra.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/grupos/" + grupoId;
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro ao salvar: " + e.getMessage());
+            return "redirect:/grupos/" + grupoId + "/editar";
+        }
+    }
+
+    // EDITA META RÁPIDA (somente ADMIN)
+    @PostMapping("/{grupoId}/meta")
+    public String atualizarMeta(@PathVariable Long grupoId,
+                                @RequestParam(required = false) String metaTitulo,
+                                @RequestParam(required = false) String metaDescricao,
+                                Principal principal,
+                                RedirectAttributes ra) {
+        try {
+            if (principal == null) {
+                ra.addFlashAttribute("erro", "Sessão expirada. Faça login novamente.");
+                return "redirect:/login";
+            }
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (u == null) {
+                ra.addFlashAttribute("erro", "Usuário não encontrado. Faça login novamente.");
+                return "redirect:/login";
+            }
+
+            grupoService.atualizarMeta(grupoId, u, metaTitulo, metaDescricao);
+            ra.addFlashAttribute("ok", "Meta atualizada.");
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            ra.addFlashAttribute("erro", "Sem permissão: " + e.getMessage());
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro ao atualizar meta: " + e.getMessage());
+        }
+        return "redirect:/grupos/" + grupoId;
+    }
+}

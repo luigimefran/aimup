@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Detalhe do Grupo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:linear-gradient(0deg,#6fbb96 0%,#23a86b 100%);font-family:'Segoe UI',sans-serif;color:#fff;min-height:100vh}
+    .card{background-color:rgba(255,255,255,.12);border:none;border-radius:20px;backdrop-filter:blur(5px);color:#fff}
+    .card.bg-white{color:#212529}
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <a class="btn btn-outline-light" href="/grupos"><i class="fa fa-arrow-left"></i> Meus Grupos</a>
+    <h3 class="fw-bold mb-0" th:text="${grupo.nome}">Nome do grupo</h3>
+    <div class="d-flex gap-2">
+      <a class="btn btn-light text-success" th:href="@{|/tarefas/grupo/${grupo.id}|}">Ver Tarefas</a>
+      <a class="btn btn-success" th:if="${papel?.name() == 'ADMIN'}" th:href="@{|/grupos/${grupo.id}/editar|}">Editar grupo</a>
+    </div>
+  </div>
+
+  <div class="card p-4 mt-3">
+    <h5 class="mb-2">Meta do grupo</h5>
+    <p class="mb-1"><strong th:text="${grupo.metaTitulo}">Meta título</strong></p>
+    <p class="mb-0" th:text="${grupo.metaDescricao}">Meta descrição</p>
+
+    <div class="mt-2" th:if="${grupo.dataLimite != null}">
+      <small>Data limite: <strong th:text="${#temporals.format(grupo.dataLimite,'dd/MM/yyyy')}">--/--/----</strong></small>
+      <span class="badge bg-secondary ms-2"
+            th:if="${#temporals.createNow().toLocalDate().isAfter(grupo.dataLimite)}">Desafio encerrado</span>
+    </div>
+  </div>
+
+  <!-- PROGRESSO -->
+  <div class="card p-4 mt-3 bg-white text-dark">
+    <h5 class="fw-bold text-success mb-3">Progresso</h5>
+
+    <div class="mb-2 small">
+      Início: <strong th:text="${#temporals.format(grupo.criadoEm,'dd/MM/yyyy')}">--/--/----</strong>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      Fim: <strong th:text="${grupo.dataLimite != null ? #temporals.format(grupo.dataLimite,'dd/MM/yyyy') : '—'}">—</strong>
+    </div>
+
+    <div class="mb-2 small">
+      Pontos: <strong th:text="${meusPontos}">0</strong>
+      de <strong th:text="${maxPossivel}">0</strong> possíveis até agora
+    </div>
+
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+         th:aria-valuenow="${progresso}">
+      <div class="progress-bar bg-success" th:style="'width:' + ${progresso} + '%'"
+           th:text="${progresso + '%'}">0%</div>
+    </div>
+  </div>
+
+  <!-- RANKING -->
+  <div class="card p-4 mt-3 bg-white text-dark" th:if="${ranking != null}">
+    <h5 class="fw-bold text-success mb-3">Ranking</h5>
+
+    <!-- Top 3 -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-4" th:each="r,st : ${ranking}" th:if="${st.index < 3}">
+        <div class="p-3 rounded-4 border border-success" style="background:#e9f7ef;">
+          <div class="d-flex align-items-center gap-3">
+            <img th:src="${(r.fotoPerfil != null and !#strings.isEmpty(r.fotoPerfil)) ? r.fotoPerfil : '/img/user-default.png'}"
+                 alt="avatar" class="rounded-circle" style="width:64px;height:64px;object-fit:cover;">
+            <div>
+              <div class="fw-bold" th:text="${(st.index+1) + 'º - ' + r.nome}">1º - Nome</div>
+              <div class="text-success" th:text="${r.pontos + ' pts'}">0 pts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista demais -->
+    <ul class="list-group">
+      <li class="list-group-item d-flex align-items-center justify-content-between"
+          th:each="r,st : ${ranking}" th:if="${st.index >= 3}">
+        <div class="d-flex align-items-center gap-3">
+          <span class="badge bg-success rounded-pill" th:text="${st.index+1}">4</span>
+          <img th:src="${(r.fotoPerfil != null and !#strings.isEmpty(r.fotoPerfil)) ? r.fotoPerfil : '/img/user-default.png'}"
+               alt="avatar" class="rounded-circle" style="width:36px;height:36px;object-fit:cover;">
+          <strong th:text="${r.nome}">Nome</strong>
+        </div>
+        <span class="text-success fw-bold" th:text="${r.pontos + ' pts'}">0 pts</span>
+      </li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

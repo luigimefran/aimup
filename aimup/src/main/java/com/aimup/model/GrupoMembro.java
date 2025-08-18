@@ -1,0 +1,38 @@
+package com.aimup.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "grupos_membros",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"grupo_id","usuario_id"}))
+public class GrupoMembro {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(optional = false) @JoinColumn(name = "grupo_id")
+    private Grupo grupo;
+
+    @ManyToOne(optional = false) @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PapelNoGrupo papel = PapelNoGrupo.MEMBRO;
+
+    @Column(nullable = false)
+    private LocalDateTime entrouEm = LocalDateTime.now();
+
+    public enum PapelNoGrupo { ADMIN, MEMBRO }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Grupo getGrupo() { return grupo; }
+    public void setGrupo(Grupo grupo) { this.grupo = grupo; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+    public PapelNoGrupo getPapel() { return papel; }
+    public void setPapel(PapelNoGrupo papel) { this.papel = papel; }
+    public LocalDateTime getEntrouEm() { return entrouEm; }
+    public void setEntrouEm(LocalDateTime entrouEm) { this.entrouEm = entrouEm; }
+}

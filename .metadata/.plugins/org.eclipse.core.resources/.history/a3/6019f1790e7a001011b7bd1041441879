@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Editar Grupo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:linear-gradient(0deg,#6fbb96 0%,#23a86b 100%);font-family:'Segoe UI',sans-serif;color:#fff;min-height:100vh}
+    .card{background-color:rgba(255,255,255,.12);border:none;border-radius:20px;backdrop-filter:blur(5px);color:#fff}
+    .card.bg-white{color:#212529}
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <a class="btn btn-outline-light" th:href="@{|/grupos/${grupo.id}|}"><i class="fa fa-arrow-left"></i> Voltar</a>
+    <h3 class="fw-bold">Editar Grupo</h3>
+    <a class="btn btn-success" th:href="@{|/tarefas/grupo/${grupo.id}|}">Ver Tarefas</a>
+  </div>
+
+  <div class="card p-4 mt-3">
+    <div th:if="${erro}" class="alert alert-danger" th:text="${erro}"></div>
+    <div th:if="${ok}" class="alert alert-success" th:text="${ok}"></div>
+
+    <form th:action="@{|/grupos/${grupo.id}/atualizar|}" method="post">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+      <div class="mb-3">
+        <label class="form-label">Nome do grupo</label>
+        <input class="form-control" name="nome" th:value="${grupo.nome}" required>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Meta (título)</label>
+          <input class="form-control" name="metaTitulo" th:value="${grupo.metaTitulo}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Descrição da meta</label>
+          <input class="form-control" name="metaDescricao" th:value="${grupo.metaDescricao}">
+        </div>
+      </div>
+
+      <hr class="border-light my-4"/>
+
+      <h5 class="mb-3">Tarefas</h5>
+      <div id="tarefasContainer">
+        <div class="row g-2 align-items-end mb-2" th:each="t : ${tarefas}">
+          <input type="hidden" name="tId" th:value="${t.id}">
+          <div class="col-md-4">
+            <label class="form-label">Título</label>
+            <input class="form-control" name="tTitulo" th:value="${t.titulo}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Descrição</label>
+            <input class="form-control" name="tDesc" th:value="${t.descricao}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Pontos</label>
+            <input class="form-control" name="tPontos" type="number" min="1" th:value="${t.pontos}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Frequência</label>
+            <select class="form-control" name="tFreq">
+              <option value="DIARIA"
+                      th:selected="${t.frequencia} == T(com.aimup.model.Tarefa.Frequencia).DIARIA">Diária</option>
+              <option value="SEMANAL"
+                      th:selected="${t.frequencia} == T(com.aimup.model.Tarefa.Frequencia).SEMANAL">Semanal</option>
+            </select>
+          </div>
+          <div class="col-md-1">
+            <!-- usa literal substitution para evitar erro de parsing -->
+            <button type="button" class="btn btn-outline-light"
+                    th:onclick="|remover(${t.id})|"
+                    title="Desativar">X</button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-light text-success mt-2" onclick="addTarefa()">+ Adicionar tarefa</button>
+
+      <div id="removerBucket"></div>
+
+      <div class="mt-4">
+        <button class="btn btn-success">Salvar alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function addTarefa() {
+  const wrap = document.createElement('div');
+  wrap.className = 'row g-2 align-items-end mb-2';
+  wrap.innerHTML = `
+    <div class="col-md-4">
+      <label class="form-label">Título</label>
+      <input class="form-control" name="tTitulo" placeholder="Nova tarefa">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Descrição</label>
+      <input class="form-control" name="tDesc" placeholder="">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Pontos</label>
+      <input class="form-control" name="tPontos" type="number" min="1" value="5">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Frequência</label>
+      <select class="form-control" name="tFreq">
+        <option value="DIARIA">Diária</option>
+        <option value="SEMANAL" selected>Semanal</option>
+      </select>
+    </div>
+    <div class="col-md-1">
+      <button type="button" class="btn btn-outline-light" onclick="this.closest('.row').remove()">X</button>
+    </div>
+  `;
+  document.getElementById('tarefasContainer').appendChild(wrap);
+}
+function remover(id){
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.name = 'removerId';
+  hidden.value = id;
+  document.getElementById('removerBucket').appendChild(hidden);
+  alert('Tarefa marcada para remoção ao salvar.');
+}
+</script>
+</body>
+</html>

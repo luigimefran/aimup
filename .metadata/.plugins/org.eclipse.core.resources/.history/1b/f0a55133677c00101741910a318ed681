@@ -1,0 +1,160 @@
+package com.aimup.service;
+
+import com.aimup.model.*;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.repository.TarefaConclusaoRepository;
+import com.aimup.repository.TarefaRepository;
+import com.aimup.repository.UsuarioRepository;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.temporal.WeekFields;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
+
+@Service
+public class TarefaService {
+    private final TarefaRepository tarefaRepo;
+    private final TarefaConclusaoRepository conclusaoRepo;
+    private final GrupoMembrosRepository membroRepo;
+    private final UsuarioRepository usuarioRepo;
+
+    public TarefaService(TarefaRepository tarefaRepo,
+                         TarefaConclusaoRepository conclusaoRepo,
+                         GrupoMembrosRepository membroRepo,
+                         UsuarioRepository usuarioRepo) {
+        this.tarefaRepo = tarefaRepo;
+        this.conclusaoRepo = conclusaoRepo;
+        this.membroRepo = membroRepo;
+        this.usuarioRepo = usuarioRepo;
+    }
+
+    public List<Tarefa> listarAtivasDoGrupoParaUsuario(Long grupoId, Long usuarioId) {
+        if (!membroRepo.existsByGrupoIdAndUsuarioId(grupoId, usuarioId)) {
+            throw new AccessDeniedException("Você não pertence a este grupo.");
+        }
+        return tarefaRepo.findByGrupoIdAndAtivaTrueOrderByIdAsc(grupoId);
+    }
+
+    private String periodoChave(Tarefa t, LocalDate hoje) {
+        if (t.getFrequencia() == Tarefa.Frequencia.DIARIA) {
+            return hoje.toString(); // yyyy-MM-dd
+        } else {
+            WeekFields wf = WeekFields.of(Locale.getDefault());
+            int week = hoje.get(wf.weekOfWeekBasedYear());
+            int year = hoje.get(wf.weekBasedYear());
+            return year + "-W" + String.format("%02d", week); // ex: 2025-W33
+        }
+    }
+
+    @Transactional
+    public void criarTarefa(Usuario autor, Long grupoId, String titulo, String descricao, Integer pontos, Tarefa.Frequencia freq) {
+        var gm = membroRepo.findByGrupoIdAndUsuarioId(grupoId, autor.getId())
+                .orElseThrow(() -> new AccessDeniedException("Você não pertence a este grupo."));
+        if (gm.getPapel() != GrupoMembro.PapelNoGrupo.ADMIN) {
+            throw new AccessDeniedException("Apenas admin pode criar tarefas.");
+        }
+        Tarefa t = new Tarefa();
+        Grupo g = new Grupo(); g.setId(grupoId);
+        t.setGrupo(g);
+        t.setTitulo(titulo);
+        t.setDescricao(descricao);
+        t.setPontos(pontos == null ? 5 : Math.max(1, pontos));
+        t.setFrequencia(freq == null ? Tarefa.Frequencia.SEMANAL : freq);
+        t.setAtiva(true);
+        tarefaRepo.save(t);
+    }
+
+    @Transactional
+    public void marcarConclusao(Long tarefaId, Usuario usuario) {
+        Tarefa tarefa = tarefaRepo.findById(tarefaId)
+                .orElseThrow(() -> new EntityNotFoundException("Tarefa não encontrada"));
+
+        // trava se grupo expirou
+        if (tarefa.getGrupo().getDataLimite() != null
+                && LocalDate.now().isAfter(tarefa.getGrupo().getDataLimite())) {
+            throw new AccessDeniedException("O desafio deste grupo já encerrou.");
+        }
+
+        if (!membroRepo.existsByGrupoIdAndUsuarioId(tarefa.getGrupo().getId(), usuario.getId())) {
+            throw new AccessDeniedException("Você não pertence a este grupo.");
+        }
+
+        String pc = periodoChave(tarefa, LocalDate.now());
+        if (conclusaoRepo.existsByTarefaIdAndUsuarioIdAndPeriodoChave(tarefaId, usuario.getId(), pc)) return;
+
+        TarefaConclusao c = new TarefaConclusao();
+        c.setTarefa(tarefa);
+        c.setUsuario(usuario);
+        c.setPeriodoChave(pc);
+        conclusaoRepo.save(c);
+
+        // soma na pontuação do usuário (compatível com int ou Integer)
+        Integer pontAtualObj = null;
+        try {
+            pontAtualObj = usuario.getPontuacao(); // se for 'int', autoboxa; se for 'Integer', pode ser null
+        } catch (Exception ignored) {}
+        int pontAtual = (pontAtualObj == null ? 0 : pontAtualObj);
+        Integer pontosTarefaObj = tarefa.getPontos();
+        int pontosTarefa = (pontosTarefaObj == null ? 0 : pontosTarefaObj);
+
+        usuario.setPontuacao(pontAtual + pontosTarefa);
+        usuarioRepo.save(usuario);
+    }
+
+    public int pontosDoUsuarioNoGrupo(Long usuarioId, Long grupoId) {
+        Integer soma = conclusaoRepo.somaPontosPorUsuarioEGrupoTotal(usuarioId, grupoId);
+        return (soma == null ? 0 : soma);
+    }
+
+    public List<Long> idsTarefasConcluidasPeriodoAtual(Long usuarioId, Long grupoId) {
+        LocalDate hoje = LocalDate.now();
+        String periodoDiario = hoje.toString();
+
+        var wf = WeekFields.of(Locale.getDefault());
+        String periodoSemanal = hoje.get(wf.weekBasedYear()) + "-W" +
+                String.format("%02d", hoje.get(wf.weekOfWeekBasedYear()));
+
+        var diarias = conclusaoRepo.idsConcluidasNoPeriodo(usuarioId, grupoId, periodoDiario);
+        var semanais = conclusaoRepo.idsConcluidasNoPeriodo(usuarioId, grupoId, periodoSemanal);
+
+        return java.util.stream.Stream.concat(diarias.stream(), semanais.stream())
+                .distinct().collect(Collectors.toList());
+    }
+
+    // Progresso: pontos ganhos / pontos máximos possíveis até o momento do desafio
+    public int progressoPercentual(Grupo grupo, Long usuarioId) {
+        var inicio = grupo.getCriadoEm() == null ? LocalDate.now() : grupo.getCriadoEm().toLocalDate();
+        var fim = grupo.getDataLimite() == null ? LocalDate.now() : grupo.getDataLimite();
+        var hoje = LocalDate.now();
+        var limiteConsiderado = hoje.isBefore(fim) ? hoje : fim;
+
+        List<Tarefa> tarefas = tarefaRepo.findByGrupoIdAndAtivaTrueOrderByIdAsc(grupo.getId());
+
+        long max = 0;
+        for (Tarefa t : tarefas) {
+            // pontos da tarefa "null-safe" (compatível com int/Integer no model)
+            Integer pObj = t.getPontos();
+            int pontos = (pObj == null ? 0 : pObj);
+
+            if (t.getFrequencia() == Tarefa.Frequencia.DIARIA) {
+                long dias = java.time.temporal.ChronoUnit.DAYS.between(inicio, limiteConsiderado) + 1;
+                if (dias < 0) dias = 0;
+                max += dias * (long) pontos;
+            } else {
+                long semanas = java.time.temporal.ChronoUnit.WEEKS.between(inicio, limiteConsiderado) + 1;
+                if (semanas < 0) semanas = 0;
+                max += semanas * (long) pontos;
+            }
+        }
+
+        int ganhos = pontosDoUsuarioNoGrupo(usuarioId, grupo.getId());
+        if (max <= 0) return 0;
+        long pct = Math.round((ganhos * 100.0) / max);
+        return (int) Math.max(0, Math.min(100, pct));
+    }
+}

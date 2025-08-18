@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Checklist do Grupo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:linear-gradient(0deg,#6fbb96 0%,#23a86b 100%);font-family:'Segoe UI',sans-serif;color:#fff;min-height:100vh}
+    .card{background-color:rgba(255,255,255,.12);border:none;border-radius:20px;backdrop-filter:blur(5px);color:#fff}
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a class="btn btn-outline-light" href="/"><i class="fa fa-arrow-left"></i> Início</a>
+    <h3 class="fw-bold mb-0">Checklist de Tarefas</h3>
+    <span class="badge bg-light text-success fs-6" th:text="'Seus pontos: ' + ${pontos}">Seus pontos: 0</span>
+  </div>
+
+  <div class="card p-4">
+    <div th:if="${#lists.isEmpty(tarefas)}" class="alert alert-light text-dark mb-0">
+      Nenhuma tarefa cadastrada ainda. Quando o admin criar, aparecerá aqui.
+    </div>
+
+    <ul class="list-group" th:if="${!#lists.isEmpty(tarefas)}">
+      <li class="list-group-item d-flex align-items-start" th:each="t : ${tarefas}">
+        <form th:action="@{|/tarefas/${t.id}/concluir|}" method="post" class="me-2">
+          <input type="hidden" name="grupoId" th:value="${grupoId}"/>
+          <button class="btn btn-outline-success"
+                  th:disabled="${concluidas.contains(t.id)}"
+                  th:text="${concluidas.contains(t.id)} ? 'Concluída' : 'Concluir'">
+            Concluir
+          </button>
+        </form>
+        <div class="flex-fill">
+          <div class="d-flex justify-content-between">
+            <strong th:text="${t.titulo}">Título</strong>
+            <span class="badge bg-success" th:text="${t.pontos} + ' pts'">0 pts</span>
+          </div>
+          <small class="text-light opacity-75" th:text="${t.descricao}">Descrição</small>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

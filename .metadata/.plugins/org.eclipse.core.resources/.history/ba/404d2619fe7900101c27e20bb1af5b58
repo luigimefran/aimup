@@ -1,0 +1,30 @@
+package com.aimup.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+public class Tarefa {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String descricao;
+
+    private boolean concluida;
+
+    private boolean diaria;
+
+    private boolean semanal;
+
+    @ManyToOne
+    private Usuario usuario;
+    
+    public boolean isConcluida() {
+        return concluida;
+    }
+
+}

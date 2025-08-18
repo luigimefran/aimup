@@ -1,0 +1,33 @@
+package com.aimup.model;
+
+package com.aimup.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "tarefas_conclusoes",
+       uniqueConstraints = @UniqueConstraint(name = "uk_tarefa_usuario_periodo",
+           columnNames = {"tarefa_id", "usuario_id", "periodo_chave"}))
+public class TarefaConclusao {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(optional = false) private Tarefa tarefa;
+    @ManyToOne(optional = false) private Usuario usuario;
+
+    @Column(name="periodo_chave", length = 20, nullable = false)
+    private String periodoChave; // ex: 2025-08-15 (diária) ou 2025-W33 (semanal)
+
+    @Column(nullable = false)
+    private LocalDateTime concluidoEm = LocalDateTime.now();
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Tarefa getTarefa() { return tarefa; }
+    public void setTarefa(Tarefa tarefa) { this.tarefa = tarefa; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+    public LocalDateTime getConcluidaEm() { return concluidaEm; }
+    public void setConcluidaEm(LocalDateTime concluidaEm) { this.concluidaEm = concluidaEm; }
+}

@@ -1,0 +1,39 @@
+package com.aimup.repository;
+
+import com.aimup.model.TarefaConclusao;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+
+public interface TarefaConclusaoRepository extends JpaRepository<TarefaConclusao, Long> {
+
+    boolean existsByTarefaIdAndUsuarioIdAndPeriodoChave(Long tarefaId, Long usuarioId, String periodoChave);
+
+    @Query("""
+       select tc.tarefa.id
+         from TarefaConclusao tc
+        where tc.usuario.id = :usuarioId
+          and tc.tarefa.grupo.id = :grupoId
+          and tc.periodoChave = :periodo
+    """)
+    List<Long> idsConcluidasNoPeriodo(Long usuarioId, Long grupoId, String periodo);
+
+    @Query("""
+       select coalesce(sum(tc.tarefa.pontos),0)
+         from TarefaConclusao tc
+        where tc.usuario.id = :usuarioId
+          and tc.tarefa.grupo.id = :grupoId
+    """)
+    Integer somaPontosPorUsuarioEGrupoTotal(Long usuarioId, Long grupoId);
+    
+    @Query("""
+    		   select tc.usuario.id, coalesce(sum(tc.tarefa.pontos),0)
+    		     from TarefaConclusao tc
+    		    where tc.tarefa.grupo.id = :grupoId
+    		   group by tc.usuario.id
+    		   order by sum(tc.tarefa.pontos) desc
+    		""")
+    		List<Object[]> rankingPorGrupo(Long grupoId);
+
+}

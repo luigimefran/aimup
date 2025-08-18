@@ -43,7 +43,7 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/login", "/cadastro", "/cadastro/**", "/esqueceuSenha",
-                    "/css/**", "/js/**", "/img/**", "/images/**", "/webjars/**", "/favicon.ico"
+                    "/css/**", "/js/**", "/img/**", "/images/**", "/webjars/**", "/favicon.ico",   "/uploads/**" 
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -61,7 +61,8 @@ public class WebSecurityConfig {
                 .permitAll()
             )
             // OPCIONAL: se quiser garantir que o POST /cadastro não quebre por CSRF
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/cadastro"));
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/cadastro", "/grupos/**", "/tarefas/**"));
+
 
         return http.build();
     }

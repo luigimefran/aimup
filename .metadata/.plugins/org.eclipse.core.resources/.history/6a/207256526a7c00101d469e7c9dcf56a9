@@ -1,0 +1,29 @@
+package com.aimup.service;
+
+import com.aimup.model.Lembrete;
+import com.aimup.model.Usuario;
+import com.aimup.repository.LembreteRepository;
+import com.aimup.repository.UsuarioRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class LembreteService {
+    private final LembreteRepository lembreteRepository;
+    private final UsuarioRepository usuarioRepository;
+
+    public LembreteService(LembreteRepository lembreteRepository, UsuarioRepository usuarioRepository) {
+        this.lembreteRepository = lembreteRepository;
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    public List<Lembrete> getLembretesDoUsuario(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email);
+        LocalDateTime agora = LocalDateTime.now();
+        // limpa vencidos silenciosamente
+        lembreteRepository.deleteByUsuarioAndDataHoraBefore(usuario, agora);
+        return lembreteRepository.findByUsuarioAndDataHoraAfterOrderByDataHoraAsc(usuario, agora);
+    }
+}

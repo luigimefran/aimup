@@ -1,0 +1,43 @@
+package com.aimup.repository;
+
+import com.aimup.model.TarefaConclusao;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+
+public interface TarefaConclusaoRepository extends JpaRepository<TarefaConclusao, Long> {
+
+    boolean existsByTarefaIdAndUsuarioIdAndPeriodoChave(Long tarefaId, Long usuarioId, String periodoChave);
+
+    @Query("""
+           select c.tarefa.id
+           from TarefaConclusao c
+           where c.usuario.id = :usuarioId
+             and c.tarefa.grupo.id = :grupoId
+             and c.periodoChave = :periodo
+           """)
+    List<Long> idsConcluidasNoPeriodo(Long usuarioId, Long grupoId, String periodo);
+
+    @Query("""
+           select coalesce(sum(t.pontos),0)
+           from TarefaConclusao c join c.tarefa t
+           where c.usuario.id = :usuarioId
+             and t.grupo.id = :grupoId
+           """)
+    Integer somaPontosPorUsuarioEGrupoTotal(Long usuarioId, Long grupoId);
+
+    // Ranking do grupo (usuarioId, nome, pontos, fotoPerfil)
+    @Query("""
+           select new com.aimup.dto.RankingDTO(u.id, u.nome,
+                    cast(coalesce(sum(t.pontos),0) as integer),
+                    u.fotoPerfil)
+           from TarefaConclusao c
+             join c.tarefa t
+             join c.usuario u
+           where t.grupo.id = :grupoId
+           group by u.id, u.nome, u.fotoPerfil
+           order by 3 desc, u.nome asc
+           """)
+    List<com.aimup.dto.RankingDTO> rankingPorGrupo(Long grupoId);
+}

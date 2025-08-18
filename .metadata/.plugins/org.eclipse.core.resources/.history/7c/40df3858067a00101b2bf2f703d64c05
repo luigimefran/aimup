@@ -1,0 +1,117 @@
+package com.aimup.controller;
+
+import com.aimup.model.Grupo;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Tarefa;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.repository.GrupoRepository;
+import com.aimup.service.GrupoService;
+import com.aimup.service.UsuarioService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
+
+@Controller
+@RequestMapping("/grupos")
+public class GrupoController {
+
+    private final GrupoService grupoService;
+    private final GrupoRepository grupoRepo;
+    private final GrupoMembrosRepository membroRepo;
+    private final UsuarioService usuarioService;
+
+    public GrupoController(GrupoService grupoService,
+                           GrupoRepository grupoRepo,
+                           GrupoMembrosRepository membroRepo,
+                           UsuarioService usuarioService) {
+        this.grupoService = grupoService;
+        this.grupoRepo = grupoRepo;
+        this.membroRepo = membroRepo;
+        this.usuarioService = usuarioService;
+    }
+
+    @GetMapping
+    public String listarMeusGrupos(@RequestParam(value = "q", required = false) String q,
+                                   Model model, Principal principal) {
+        Usuario u = usuarioService.buscarPorEmail(principal.getName());
+        var membros = membroRepo.findByUsuarioId(u.getId());
+        var grupos = membros.stream().map(GrupoMembro::getGrupo).toList();
+
+        var resultados = (q == null || q.isBlank()) ? List.<Grupo>of() : grupoService.buscarPorNome(q);
+
+        model.addAttribute("usuario", u);
+        model.addAttribute("grupos", grupos);
+        model.addAttribute("q", q == null ? "" : q);
+        model.addAttribute("resultados", resultados);
+        return "grupo/lista";
+    }
+
+    @PostMapping("/entrar")
+    public String entrar(@RequestParam Long grupoId, Principal principal) {
+        Usuario u = usuarioService.buscarPorEmail(principal.getName());
+        grupoService.entrarNoGrupo(grupoId, u);
+        return "redirect:/grupos/" + grupoId;
+    }
+
+    @GetMapping("/{grupoId}")
+    public String detalharGrupo(@PathVariable Long grupoId, Principal principal, Model model) {
+        Usuario u = usuarioService.buscarPorEmail(principal.getName());
+        grupoService.garantirMembro(grupoId, u.getId());
+        Grupo g = grupoRepo.findById(grupoId).orElseThrow();
+        GrupoMembro membro = membroRepo.findByGrupoIdAndUsuarioId(grupoId, u.getId()).orElseThrow();
+        model.addAttribute("grupo", g);
+        model.addAttribute("papel", membro.getPapel());
+        return "grupo/detalhe";
+    }
+
+    @GetMapping("/criar-form")
+    public String criarForm(Model model) {
+        return "grupo/criar";
+    }
+
+    @PostMapping("/criar")
+    public String criar(@RequestParam String nome,
+                        @RequestParam(required = false) String metaTitulo,
+                        @RequestParam(required = false) String metaDescricao,
+                        @RequestParam(name = "tTitulo", required = false) List<String> tTitulos,
+                        @RequestParam(name = "tPontos", required = false) List<Integer> tPontos,
+                        @RequestParam(name = "tFreq", required = false) List<String> tFreq,
+                        Principal principal) {
+        Usuario u = usuarioService.buscarPorEmail(principal.getName());
+
+        List<Tarefa> tarefas = new ArrayList<>();
+        if (tTitulos != null) {
+            for (int i = 0; i < tTitulos.size(); i++) {
+                String tt = tTitulos.get(i);
+                if (tt == null || tt.isBlank()) continue;
+                Integer pts = (tPontos != null && i < tPontos.size()) ? tPontos.get(i) : 5;
+                String f = (tFreq != null && i < tFreq.size()) ? tFreq.get(i) : "SEMANAL";
+
+                Tarefa t = new Tarefa();
+                t.setTitulo(tt.trim());
+                t.setDescricao(null);
+                t.setPontos(pts);
+                t.setFrequencia(Tarefa.Frequencia.valueOf(f));
+                tarefas.add(t);
+            }
+        }
+        Grupo g = grupoService.criarGrupoComTarefas(nome, metaTitulo, metaDescricao, u, tarefas);
+        return "redirect:/grupos/" + g.getId();
+    }
+
+    // EDITAR META (ADMIN)
+    @PostMapping("/{grupoId}/meta")
+    public String atualizarMeta(@PathVariable Long grupoId,
+                                @RequestParam(required = false) String metaTitulo,
+                                @RequestParam(required = false) String metaDescricao,
+                                Principal principal) {
+        Usuario u = usuarioService.buscarPorEmail(principal.getName());
+        grupoService.atualizarMeta(grupoId, u, metaTitulo, metaDescricao);
+        return "redirect:/grupos/" + grupoId;
+    }
+}

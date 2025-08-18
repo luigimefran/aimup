@@ -1,0 +1,5 @@
+package com.aimup.security;
+
+public class SecurityUtil {
+
+}

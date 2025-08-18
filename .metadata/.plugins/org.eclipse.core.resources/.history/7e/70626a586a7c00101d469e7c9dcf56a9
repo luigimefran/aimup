@@ -1,0 +1,80 @@
+package com.aimup.controller;
+
+import com.aimup.model.Lembrete;
+import com.aimup.model.Usuario;
+import com.aimup.repository.LembreteRepository;
+import com.aimup.service.UsuarioService;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.security.Principal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+@Controller
+@RequestMapping("/lembretes")
+public class LembreteController {
+
+    private final LembreteRepository repo;
+    private final UsuarioService usuarioService;
+
+    // Formato do <input type="datetime-local"> (sem segundos)
+    private static final DateTimeFormatter FORMATO_HTML5 = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+    public LembreteController(LembreteRepository repo, UsuarioService usuarioService) {
+        this.repo = repo;
+        this.usuarioService = usuarioService;
+    }
+
+    @PostMapping("/salvar")
+    public String salvar(@RequestParam String titulo,
+                         @RequestParam String descricao,
+                         @RequestParam String dataHora,
+                         Principal principal,
+                         RedirectAttributes ra) {
+        try {
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            LocalDateTime quando = LocalDateTime.parse(dataHora, FORMATO_HTML5);
+
+            if (quando.isBefore(LocalDateTime.now())) {
+                ra.addFlashAttribute("erro", "A data e hora precisam estar no futuro.");
+                return "redirect:/";
+            }
+
+            Lembrete l = new Lembrete();
+            l.setTitulo(titulo);
+            l.setDescricao(descricao);
+            l.setDataHora(quando);
+            l.setUsuario(u);
+            repo.save(l);
+
+            ra.addFlashAttribute("ok", "Lembrete salvo!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro: " + e.getMessage());
+        }
+        return "redirect:/";
+    }
+
+    @PostMapping("/{id}/excluir")
+    public String excluir(@PathVariable Long id, Principal principal, RedirectAttributes ra) {
+        try {
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+
+            // opção 1: apagar diretamente com filtro de dono
+            long apagados = repo.deleteByIdAndUsuarioId(id, u.getId());
+
+            // // opção 2 (se preferir manter): buscar e apagar
+            // repo.findByIdAndUsuarioId(id, u.getId()).ifPresent(repo::delete);
+
+            if (apagados > 0) {
+                ra.addFlashAttribute("ok", "Lembrete excluído!");
+            } else {
+                ra.addFlashAttribute("erro", "Lembrete não encontrado ou não pertence a você.");
+            }
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro: " + e.getMessage());
+        }
+        return "redirect:/";
+    }
+}

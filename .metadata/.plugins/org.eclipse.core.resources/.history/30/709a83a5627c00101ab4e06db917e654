@@ -1,0 +1,24 @@
+package com.aimup.repository;
+
+import com.aimup.model.Lembrete;
+import com.aimup.model.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+public interface LembreteRepository extends JpaRepository<Lembrete, Long> {
+
+    // lista apenas os lembretes futuros do usuário (ordenados)
+    List<Lembrete> findByUsuarioAndDataHoraAfterOrderByDataHoraAsc(Usuario u, LocalDateTime agora);
+
+    // apaga lembretes vencidos do usuário
+    void deleteByUsuarioAndDataHoraBefore(Usuario u, LocalDateTime agora);
+
+    // >>> adicionados para o excluir seguro <<<
+    Optional<Lembrete> findByIdAndUsuarioId(Long id, Long usuarioId);
+
+    // alternativa direta: apagar já filtrando por dono
+    long deleteByIdAndUsuarioId(Long id, Long usuarioId);
+}

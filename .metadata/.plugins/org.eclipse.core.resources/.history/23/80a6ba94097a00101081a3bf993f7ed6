@@ -1,0 +1,51 @@
+@Transactional
+public void atualizarGrupoComTarefas(Long grupoId, Usuario solicitante,
+                                     String novoNome, String metaTitulo, String metaDescricao,
+                                     List<Tarefa> upserts, List<Long> removerIds) {
+    var g = grupoRepo.findById(grupoId).orElseThrow();
+    var gm = membroRepo.findByGrupoIdAndUsuarioId(grupoId, solicitante.getId())
+            .orElseThrow(() -> new AccessDeniedException("Você não pertence a este grupo."));
+    if (gm.getPapel() != GrupoMembro.PapelNoGrupo.ADMIN) {
+        throw new AccessDeniedException("Apenas ADMIN pode editar o grupo.");
+    }
+
+    if (novoNome != null && !novoNome.isBlank()) g.setNome(novoNome.trim());
+    g.setMetaTitulo(metaTitulo);
+    g.setMetaDescricao(metaDescricao);
+    grupoRepo.save(g);
+
+    // Desativar tarefas removidas (soft delete)
+    if (removerIds != null) {
+        for (Long id : removerIds) {
+            if (id == null) continue;
+            var t = tarefaRepo.findById(id).orElse(null);
+            if (t != null && t.getGrupo().getId().equals(grupoId)) {
+                t.setAtiva(false);
+                tarefaRepo.save(t);
+            }
+        }
+    }
+
+    // Upsert de tarefas
+    if (upserts != null) {
+        for (Tarefa in : upserts) {
+            if (in.getId() != null) {
+                var t = tarefaRepo.findById(in.getId()).orElseThrow();
+                if (!t.getGrupo().getId().equals(grupoId))
+                    throw new AccessDeniedException("Tarefa não pertence ao grupo.");
+                t.setTitulo(in.getTitulo());
+                t.setDescricao(in.getDescricao());
+                t.setPontos(in.getPontos() == null ? 5 : in.getPontos());
+                t.setFrequencia(in.getFrequencia() == null ? Tarefa.Frequencia.SEMANAL : in.getFrequencia());
+                t.setAtiva(true);
+                tarefaRepo.save(t);
+            } else {
+                in.setGrupo(g);
+                if (in.getPontos() == null) in.setPontos(5);
+                if (in.getFrequencia() == null) in.setFrequencia(Tarefa.Frequencia.SEMANAL);
+                in.setAtiva(true);
+                tarefaRepo.save(in);
+            }
+        }
+    }
+}

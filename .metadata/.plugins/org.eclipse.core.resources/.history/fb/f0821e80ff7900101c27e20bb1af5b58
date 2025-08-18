@@ -1,0 +1,79 @@
+package com.aimup.service;
+
+import com.aimup.model.Grupo;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Tarefa;
+import com.aimup.model.TarefaConclusao;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.repository.TarefaConclusaoRepository;
+import com.aimup.repository.TarefaRepository;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class TarefaService {
+    private final TarefaRepository tarefaRepo;
+    private final TarefaConclusaoRepository conclusaoRepo;
+    private final GrupoMembrosRepository membroRepo;
+
+    public TarefaService(TarefaRepository tarefaRepo, TarefaConclusaoRepository conclusaoRepo, GrupoMembrosRepository membroRepo) {
+        this.tarefaRepo = tarefaRepo;
+        this.conclusaoRepo = conclusaoRepo;
+        this.membroRepo = membroRepo;
+    }
+
+    public List<Tarefa> listarAtivasDoGrupoParaUsuario(Long grupoId, Long usuarioId) {
+        if (!membroRepo.existsByGrupoIdAndUsuarioId(grupoId, usuarioId)) {
+            throw new AccessDeniedException("Você não pertence a este grupo.");
+        }
+        return tarefaRepo.findByGrupoIdAndAtivaTrueOrderByIdAsc(grupoId);
+    }
+
+    @Transactional
+    public void criarTarefa(Usuario autor, Long grupoId, String titulo, String descricao, Integer pontos) {
+        GrupoMembro gm = membroRepo.findByGrupoIdAndUsuarioId(grupoId, autor.getId())
+                .orElseThrow(() -> new AccessDeniedException("Você não pertence a este grupo."));
+        if (gm.getPapel() != GrupoMembro.PapelNoGrupo.ADMIN) {
+            throw new AccessDeniedException("Apenas admin pode criar tarefas.");
+        }
+        Tarefa t = new Tarefa();
+        Grupo g = new Grupo(); g.setId(grupoId);
+        t.setGrupo(g);
+        t.setTitulo(titulo);
+        t.setDescricao(descricao);
+        t.setPontos(pontos);
+        t.setAtiva(true);
+        tarefaRepo.save(t);
+    }
+
+    @Transactional
+    public void marcarConclusao(Long tarefaId, Usuario usuario) {
+        Tarefa tarefa = tarefaRepo.findById(tarefaId)
+                .orElseThrow(() -> new EntityNotFoundException("Tarefa não encontrada"));
+        if (!membroRepo.existsByGrupoIdAndUsuarioId(tarefa.getGrupo().getId(), usuario.getId())) {
+            throw new AccessDeniedException("Você não pertence a este grupo.");
+        }
+        if (conclusaoRepo.existsByTarefaIdAndUsuarioId(tarefaId, usuario.getId())) return;
+
+        TarefaConclusao c = new TarefaConclusao();
+        c.setTarefa(tarefa);
+        c.setUsuario(usuario);
+        conclusaoRepo.save(c);
+    }
+
+    public int pontosDoUsuarioNoGrupo(Long usuarioId, Long grupoId) {
+        Integer soma = conclusaoRepo.somaPontosPorUsuarioEGrupo(usuarioId, grupoId);
+        return soma == null ? 0 : soma;
+    }
+
+    public List<Long> idsTarefasConcluidasPorUsuarioNoGrupo(Long usuarioId, Long grupoId) {
+        return conclusaoRepo.findByUsuarioAndGrupo(usuarioId, grupoId)
+                .stream().map(tc -> tc.getTarefa().getId()).collect(Collectors.toList());
+    }
+}

@@ -1,0 +1,155 @@
+package com.aimup.service;
+
+import com.aimup.model.*;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.repository.GrupoRepository;
+import com.aimup.repository.TarefaRepository;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Service
+public class GrupoService {
+
+    private final GrupoRepository grupoRepo;
+    private final GrupoMembrosRepository membroRepo;
+    private final TarefaRepository tarefaRepo;
+
+    public GrupoService(GrupoRepository grupoRepo,
+                        GrupoMembrosRepository membroRepo,
+                        TarefaRepository tarefaRepo) {
+        this.grupoRepo = grupoRepo;
+        this.membroRepo = membroRepo;
+        this.tarefaRepo = tarefaRepo;
+    }
+
+    @Transactional
+    public Grupo criarGrupoComTarefas(String nome,
+                                      String metaTitulo,
+                                      String metaDescricao,
+                                      Usuario criador,
+                                      List<Tarefa> tarefas,
+                                      LocalDate dataLimite) {
+        Grupo g = new Grupo();
+        g.setNome(nome);
+        g.setCriadoPor(criador);
+        g.setAtivo(true);
+        g.setMetaTitulo(metaTitulo);
+        g.setMetaDescricao(metaDescricao);
+        g.setDataLimite(dataLimite);
+        grupoRepo.save(g);
+
+        GrupoMembro gm = new GrupoMembro();
+        gm.setGrupo(g);
+        gm.setUsuario(criador);
+        gm.setPapel(GrupoMembro.PapelNoGrupo.ADMIN);
+        membroRepo.save(gm);
+
+        if (tarefas != null) {
+            for (Tarefa t : tarefas) {
+                t.setGrupo(g);
+                if (t.getPontos() == null) t.setPontos(5);
+                if (t.getFrequencia() == null) t.setFrequencia(Tarefa.Frequencia.SEMANAL);
+                t.setAtiva(true);
+                tarefaRepo.save(t);
+            }
+        }
+        return g;
+    }
+
+    public void garantirMembro(Long grupoId, Long usuarioId) {
+        if (!membroRepo.existsByGrupoIdAndUsuarioId(grupoId, usuarioId)) {
+            throw new AccessDeniedException("Você não pertence a este grupo.");
+        }
+    }
+
+    @Transactional
+    public void entrarNoGrupo(Long grupoId, Usuario usuario) {
+        if (membroRepo.existsByGrupoIdAndUsuarioId(grupoId, usuario.getId())) return;
+        Grupo g = grupoRepo.findById(grupoId).orElseThrow();
+        GrupoMembro gm = new GrupoMembro();
+        gm.setGrupo(g);
+        gm.setUsuario(usuario);
+        gm.setPapel(GrupoMembro.PapelNoGrupo.MEMBRO);
+        membroRepo.save(gm);
+    }
+
+    public List<Grupo> buscarPorNome(String termo) {
+        return grupoRepo.findByNomeContainingIgnoreCase(termo == null ? "" : termo.trim());
+    }
+
+    @Transactional
+    public void atualizarMeta(Long grupoId, Usuario solicitante, String metaTitulo, String metaDescricao) {
+        Grupo g = grupoRepo.findById(grupoId).orElseThrow();
+        var gm = membroRepo.findByGrupoIdAndUsuarioId(grupoId, solicitante.getId())
+                .orElseThrow(() -> new AccessDeniedException("Você não pertence a este grupo."));
+        if (gm.getPapel() != GrupoMembro.PapelNoGrupo.ADMIN) {
+            throw new AccessDeniedException("Apenas ADMIN pode editar a meta do grupo.");
+        }
+        g.setMetaTitulo(metaTitulo);
+        g.setMetaDescricao(metaDescricao);
+        grupoRepo.save(g);
+    }
+
+    // >>> NOVO: atualização completa (nome/meta/dataLimite + upsert/remover tarefas)
+    @Transactional
+    public void atualizarGrupoComTarefas(Long grupoId,
+                                         Usuario solicitante,
+                                         String nome,
+                                         String metaTitulo,
+                                         String metaDescricao,
+                                         List<Tarefa> upserts,
+                                         List<Long> removerIds,
+                                         LocalDate dataLimite) {
+        Grupo g = grupoRepo.findById(grupoId).orElseThrow();
+
+        var gm = membroRepo.findByGrupoIdAndUsuarioId(grupoId, solicitante.getId())
+                .orElseThrow(() -> new AccessDeniedException("Você não pertence a este grupo."));
+        if (gm.getPapel() != GrupoMembro.PapelNoGrupo.ADMIN) {
+            throw new AccessDeniedException("Apenas ADMIN pode editar este grupo.");
+        }
+
+        g.setNome(nome);
+        g.setMetaTitulo(metaTitulo);
+        g.setMetaDescricao(metaDescricao);
+        g.setDataLimite(dataLimite);
+        grupoRepo.save(g);
+
+        // remover (desativar) tarefas marcadas
+        if (removerIds != null) {
+            for (Long id : removerIds) {
+                tarefaRepo.findByIdAndGrupoId(id, grupoId).ifPresent(t -> {
+                    t.setAtiva(false);
+                    tarefaRepo.save(t);
+                });
+            }
+        }
+
+        // upserts de tarefas
+        if (upserts != null) {
+            for (Tarefa src : upserts) {
+                if (src.getId() != null) {
+                    // update
+                    tarefaRepo.findByIdAndGrupoId(src.getId(), grupoId).ifPresent(dst -> {
+                        dst.setTitulo(src.getTitulo());
+                        dst.setDescricao(src.getDescricao());
+                        dst.setPontos(src.getPontos() == null ? 5 : src.getPontos());
+                        dst.setFrequencia(src.getFrequencia() == null ? Tarefa.Frequencia.SEMANAL : src.getFrequencia());
+                        dst.setAtiva(true);
+                        tarefaRepo.save(dst);
+                    });
+                } else {
+                    // insert
+                    src.setGrupo(g);
+                    src.setAtiva(true);
+                    if (src.getPontos() == null) src.setPontos(5);
+                    if (src.getFrequencia() == null) src.setFrequencia(Tarefa.Frequencia.SEMANAL);
+                    tarefaRepo.save(src);
+                }
+            }
+        }
+    }
+}

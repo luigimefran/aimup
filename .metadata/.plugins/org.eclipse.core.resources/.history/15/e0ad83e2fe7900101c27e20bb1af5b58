@@ -1,0 +1,44 @@
+package com.aimup.controller;
+
+import com.aimup.model.Grupo;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembroRepository;
+import com.aimup.repository.GrupoRepository;
+import com.aimup.security.SecurityUtil;
+import com.aimup.service.GrupoService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+@RequestMapping("/grupos")
+public class GrupoController {
+    private final GrupoService grupoService;
+    private final GrupoRepository grupoRepo;
+    private final GrupoMembrosRepository membroRepo;
+
+    public GrupoController(GrupoService grupoService, GrupoRepository grupoRepo, GrupoMembrosRepository membroRepo) {
+        this.grupoService = grupoService;
+        this.grupoRepo = grupoRepo;
+        this.membroRepo = membroRepo;
+    }
+
+    @GetMapping("/{grupoId}")
+    public String detalharGrupo(@PathVariable Long grupoId, Model model) {
+        Usuario u = SecurityUtil.getCurrentUser();
+        grupoService.garantirMembro(grupoId, u.getId());
+        Grupo g = grupoRepo.findById(grupoId).orElseThrow();
+        GrupoMembro membro = membroRepo.findByGrupoIdAndUsuarioId(grupoId, u.getId()).orElseThrow();
+        model.addAttribute("grupo", g);
+        model.addAttribute("papel", membro.getPapel());
+        return "grupo/detalhe";
+    }
+
+    @PostMapping("/criar")
+    public String criar(@RequestParam String nome) {
+        Usuario u = SecurityUtil.getCurrentUser();
+        Grupo g = grupoService.criarGrupo(nome, u);
+        return "redirect:/grupos/" + g.getId();
+    }
+}

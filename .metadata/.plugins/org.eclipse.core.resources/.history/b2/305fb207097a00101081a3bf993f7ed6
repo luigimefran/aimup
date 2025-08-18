@@ -1,0 +1,51 @@
+package com.aimup.controller;
+
+import com.aimup.model.Usuario;
+import com.aimup.security.SecurityUtil;
+import com.aimup.service.TarefaService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashSet;
+
+@Controller
+@RequestMapping("/tarefas")
+public class TarefaController {
+    private final TarefaService tarefaService;
+
+    public TarefaController(TarefaService tarefaService) {
+        this.tarefaService = tarefaService;
+    }
+
+    @GetMapping("/grupo/{grupoId}")
+    public String listar(@PathVariable Long grupoId, Model model) {
+        Usuario u = SecurityUtil.getCurrentUser();
+        var tarefas = tarefaService.listarAtivasDoGrupoParaUsuario(grupoId, u.getId());
+        var concluidas = tarefaService.idsTarefasConcluidasPorUsuarioNoGrupo(u.getId(), grupoId);
+        int pontos = tarefaService.pontosDoUsuarioNoGrupo(u.getId(), grupoId);
+
+        model.addAttribute("tarefas", tarefas);
+        model.addAttribute("concluidas", new HashSet<>(concluidas));
+        model.addAttribute("pontos", pontos);
+        model.addAttribute("grupoId", grupoId);
+        return "grupo/index";
+    }
+
+    @PostMapping("/{tarefaId}/concluir")
+    public String concluir(@PathVariable Long tarefaId, @RequestParam Long grupoId) {
+        Usuario u = SecurityUtil.getCurrentUser();
+        tarefaService.marcarConclusao(tarefaId, u);
+        return "redirect:/tarefas/grupo/" + grupoId;
+    }
+
+    @PostMapping("/criar")
+    public String criar(@RequestParam Long grupoId,
+                        @RequestParam String titulo,
+                        @RequestParam(required=false) String descricao,
+                        @RequestParam Integer pontos) {
+        Usuario u = SecurityUtil.getCurrentUser();
+        tarefaService.criarTarefa(u, grupoId, titulo, descricao, pontos);
+        return "redirect:/tarefas/grupo/" + grupoId;
+    }
+}

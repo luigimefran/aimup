@@ -1,0 +1,44 @@
+package com.aimup.service;
+
+import com.aimup.model.Grupo;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembroRepository;
+import com.aimup.repository.GrupoRepository;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class GrupoService {
+    private final GrupoRepository grupoRepo;
+    private final GrupoMembroRepository membroRepo;
+
+    public GrupoService(GrupoRepository grupoRepo, GrupoMembroRepository membroRepo) {
+        this.grupoRepo = grupoRepo;
+        this.membroRepo = membroRepo;
+    }
+
+    @Transactional
+    public Grupo criarGrupo(String nome, Usuario criador) {
+        Grupo g = new Grupo();
+        g.setNome(nome);
+        g.setCriadoPor(criador);
+        g.setAtivo(true);
+        grupoRepo.save(g);
+
+        GrupoMembro gm = new GrupoMembro();
+        gm.setGrupo(g);
+        gm.setUsuario(criador);
+        gm.setPapel(GrupoMembro.PapelNoGrupo.ADMIN);
+        membroRepo.save(gm);
+
+        return g;
+    }
+
+    public void garantirMembro(Long grupoId, Long usuarioId) {
+        if (!membroRepo.existsByGrupoIdAndUsuarioId(grupoId, usuarioId)) {
+            throw new AccessDeniedException("Você não pertence a este grupo.");
+        }
+    }
+}

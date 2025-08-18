@@ -1,0 +1,56 @@
+package com.aimup.service;
+
+import com.aimup.model.Usuario;
+import com.aimup.repository.UsuarioRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.List;
+
+@Service
+public class UsuarioService {
+
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          PasswordEncoder passwordEncoder) {
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public boolean emailExistente(String email) {
+        return usuarioRepository.findByEmail(email) != null;
+    }
+
+    @Transactional
+    public Usuario salvarUsuario(Usuario usuario) {
+        // Criptografa a senha antes de salvar
+        String raw = usuario.getSenha();
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("Senha não pode ser vazia");
+        }
+        usuario.setSenha(passwordEncoder.encode(raw));
+        return usuarioRepository.save(usuario);
+    }
+
+    public Usuario buscarPorEmail(String email) {
+        return usuarioRepository.findByEmail(email);
+    }
+
+    @Transactional
+    public void atualizarPerfil(String email, Usuario novo) {
+        Usuario atual = usuarioRepository.findByEmail(email);
+        if (atual == null) {
+            throw new IllegalArgumentException("Usuário não encontrado para atualização");
+        }
+        atual.setNome(novo.getNome());
+        atual.setFotoPerfil(novo.getFotoPerfil());
+        usuarioRepository.save(atual);
+    }
+
+    public List<Usuario> listarPorPontuacaoDesc() {
+        return usuarioRepository.findAllByOrderByPontuacaoDesc();
+    }
+}

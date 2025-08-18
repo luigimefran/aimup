@@ -1,0 +1,56 @@
+package com.aimup.controller;
+
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Lembrete;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.service.LembreteService;
+import com.aimup.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Controller
+public class HomeController {
+
+    @Autowired
+    private LembreteService lembreteService;
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private GrupoMembrosRepository grupoMembroRepository;
+
+    @GetMapping("/")
+    public String index(Model model, Principal principal) {
+        String email = principal.getName();
+        Usuario usuario = usuarioService.buscarPorEmail(email)
+                .orElseThrow(() -> new IllegalStateException("Usuário não encontrado: " + email));
+
+        // Lista de grupos que o usuário pertence
+        List<GrupoMembro> membros = grupoMembroRepository.findByUsuarioId(usuario.getId());
+        var grupos = membros.stream()
+                .map(GrupoMembro::getGrupo) // se o relacionamento estiver LAZY e sem sessão aberta, injete GrupoRepository e faça findById
+                .collect(Collectors.toList());
+
+        // Seus lembretes continuam por usuário (se fizer sentido no seu domínio)
+        List<Lembrete> lembretes = lembreteService.getLembretesDoUsuario(email);
+
+        model.addAttribute("usuario", usuario);
+        model.addAttribute("grupos", grupos);
+        model.addAttribute("lembretes", lembretes);
+
+        // Se quiser redirecionar automaticamente quando houver APENAS 1 grupo, descomente:
+        // if (grupos.size() == 1) {
+        //     return "redirect:/tarefas/grupo/" + grupos.get(0).getId();
+        // }
+
+        return "index/index"; // agora esta view deve listar os grupos (veja a view abaixo)
+    }
+}

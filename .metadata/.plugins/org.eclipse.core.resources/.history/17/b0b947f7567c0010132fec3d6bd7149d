@@ -1,0 +1,14 @@
+package com.aimup.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class ChatController {
+
+    @GetMapping("/chat")
+    public String chat() {
+        // View simples só para já abrir sem erro 404/500
+        return "chat/index";
+    }
+}

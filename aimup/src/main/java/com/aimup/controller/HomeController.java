@@ -1,40 +1,47 @@
 package com.aimup.controller;
 
-import com.aimup.model.Lembrete;
-import com.aimup.model.Tarefa;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembrosRepository;
 import com.aimup.service.LembreteService;
-import com.aimup.service.TarefaService;
 import com.aimup.service.UsuarioService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+
 import java.security.Principal;
 import java.util.List;
 
 @Controller
 public class HomeController {
 
-    @Autowired
-    private TarefaService tarefaService;
+    private final UsuarioService usuarioService;
+    private final GrupoMembrosRepository membroRepo;
+    private final LembreteService lembreteService;
 
-    @Autowired
-    private LembreteService lembreteService;
+    public HomeController(UsuarioService usuarioService,
+                          GrupoMembrosRepository membroRepo,
+                          LembreteService lembreteService) {
+        this.usuarioService = usuarioService;
+        this.membroRepo = membroRepo;
+        this.lembreteService = lembreteService;
+    }
 
-    @Autowired
-    private UsuarioService usuarioService;
-    
     @GetMapping("/")
-    public String index(Model model, Principal principal) {
-        String email = principal.getName();
-        List<Tarefa> tarefas = tarefaService.getTarefasDoUsuario(email);
-        List<Lembrete> lembretes = lembreteService.getLembretesDoUsuario(email);
-        int progresso = tarefaService.calcularProgresso(email);
+    public String home(Model model, Principal principal) {
+        if (principal != null) {
+          
+            lembreteService.excluirExpiradosDoUsuario(principal.getName());
 
-        model.addAttribute("tarefas", tarefas);
-        model.addAttribute("lembretes", lembretes);
-        model.addAttribute("progresso", progresso);
+            var lembretes = lembreteService.listarProximos(principal.getName());
+            model.addAttribute("lembretes", lembretes);
 
+            var u = usuarioService.buscarPorEmail(principal.getName());
+            var grupos = membroRepo.findByUsuarioId(u.getId())
+                                   .stream().map(GrupoMembro::getGrupo).toList();
+            model.addAttribute("usuario", u);
+            model.addAttribute("grupos", grupos);
+        }
         return "index/index";
     }
 }

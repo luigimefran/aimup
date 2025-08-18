@@ -1,0 +1,127 @@
+package com.aimup.controller;
+
+import com.aimup.model.Grupo;
+import com.aimup.model.GrupoMembro;
+import com.aimup.model.Tarefa;
+import com.aimup.model.Usuario;
+import com.aimup.repository.GrupoMembrosRepository;
+import com.aimup.repository.GrupoRepository;
+import com.aimup.repository.TarefaRepository;
+import com.aimup.service.GrupoService;
+import com.aimup.service.UsuarioService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.security.Principal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+@Controller
+@RequestMapping("/grupos")
+public class GrupoController {
+
+    private final GrupoService grupoService;
+    private final GrupoRepository grupoRepo;
+    private final GrupoMembrosRepository membroRepo;
+    private final UsuarioService usuarioService;
+    private final TarefaRepository tarefaRepo;
+
+    public GrupoController(GrupoService grupoService,
+                           GrupoRepository grupoRepo,
+                           GrupoMembrosRepository membroRepo,
+                           UsuarioService usuarioService,
+                           TarefaRepository tarefaRepo) {
+        this.grupoService = grupoService;
+        this.grupoRepo = grupoRepo;
+        this.membroRepo = membroRepo;
+        this.usuarioService = usuarioService;
+        this.tarefaRepo = tarefaRepo;
+    }
+
+    // ... (mantenha os GETs de lista/entrar/detalhar/criar-form/criar exatamente como você já tem)
+
+    @GetMapping("/{grupoId}/editar")
+    public String editarForm(@PathVariable Long grupoId, Principal principal, Model model, RedirectAttributes ra) {
+        try {
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            var gm = membroRepo.findByGrupoIdAndUsuarioId(grupoId, u.getId())
+                    .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Sem acesso"));
+            if (gm.getPapel() != GrupoMembro.PapelNoGrupo.ADMIN)
+                throw new org.springframework.security.access.AccessDeniedException("Apenas ADMIN");
+
+            Grupo g = grupoRepo.findById(grupoId).orElseThrow();
+            List<Tarefa> tarefas = tarefaRepo.findByGrupoIdAndAtivaTrueOrderByIdAsc(grupoId);
+
+            model.addAttribute("grupo", g);
+            model.addAttribute("tarefas", tarefas);
+            return "grupo/editar";
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro: " + e.getMessage());
+            return "redirect:/grupos/" + grupoId;
+        }
+    }
+
+    @PostMapping("/{grupoId}/atualizar")
+    public String atualizar(@PathVariable Long grupoId,
+                            @RequestParam String nome,
+                            @RequestParam(required = false) String metaTitulo,
+                            @RequestParam(required = false) String metaDescricao,
+                            @RequestParam(required = false) String dataLimite,
+                            @RequestParam(name = "tId", required = false) List<Long> tIds,
+                            @RequestParam(name = "tTitulo", required = false) List<String> tTitulos,
+                            @RequestParam(name = "tDesc", required = false) List<String> tDescs,
+                            @RequestParam(name = "tPontos", required = false) List<String> tPontos,
+                            @RequestParam(name = "tFreq", required = false) List<String> tFreq,
+                            @RequestParam(name = "removerId", required = false) List<Long> removerIds,
+                            Principal principal,
+                            RedirectAttributes ra) {
+        try {
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+
+            List<Tarefa> upserts = new ArrayList<>();
+            int n = (tTitulos == null) ? 0 : tTitulos.size();
+            for (int i = 0; i < n; i++) {
+                String titulo = tTitulos.get(i);
+                if (titulo == null || titulo.isBlank()) continue;
+
+                Tarefa t = new Tarefa();
+                if (tIds != null && i < tIds.size()) t.setId(tIds.get(i));
+                t.setTitulo(titulo.trim());
+                t.setDescricao((tDescs != null && i < tDescs.size()) ? tDescs.get(i) : null);
+
+                Integer pts = 5;
+                if (tPontos != null && i < tPontos.size()) {
+                    try {
+                        String raw = tPontos.get(i);
+                        if (raw != null && !raw.isBlank()) pts = Integer.parseInt(raw.trim());
+                    } catch (Exception ignored) {}
+                }
+                t.setPontos(pts);
+
+                Tarefa.Frequencia freq = Tarefa.Frequencia.SEMANAL;
+                if (tFreq != null && i < tFreq.size() && tFreq.get(i) != null && !tFreq.get(i).isBlank()) {
+                    try {
+                        freq = Tarefa.Frequencia.valueOf(tFreq.get(i).trim().toUpperCase());
+                    } catch (Exception ignored) {}
+                }
+                t.setFrequencia(freq);
+                upserts.add(t);
+            }
+
+            LocalDate limite = null;
+            if (dataLimite != null && !dataLimite.isBlank()) {
+                limite = LocalDate.parse(dataLimite.trim());
+            }
+
+            grupoService.atualizarGrupoComTarefas(grupoId, u, nome, metaTitulo, metaDescricao, upserts, removerIds, limite);
+            ra.addFlashAttribute("ok", "Grupo atualizado com sucesso!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro ao atualizar: " + e.getMessage());
+        }
+        return "redirect:/grupos/" + grupoId + "/editar";
+    }
+}

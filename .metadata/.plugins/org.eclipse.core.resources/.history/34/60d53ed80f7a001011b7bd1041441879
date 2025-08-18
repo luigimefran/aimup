@@ -1,0 +1,54 @@
+package com.aimup.controller;
+
+import com.aimup.model.Usuario;
+import com.aimup.service.UsuarioService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import java.security.Principal;
+
+@Controller
+public class PerfilController {
+
+    private final UsuarioService usuarioService;
+
+    public PerfilController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
+    }
+
+    @GetMapping("/perfil")
+    public String perfil(Model model, Principal principal) {
+        if (principal == null) {
+
+        	return "redirect:/login";
+        }
+        String email = principal.getName();
+        Usuario usuario = usuarioService.buscarPorEmail(email); 
+        model.addAttribute("usuario", usuario); 
+        return "perfil/perfil";
+    }
+    
+    @PostMapping("/perfil/foto")
+    public String atualizarFoto(@RequestParam("foto") MultipartFile foto,
+                                Principal principal,
+                                RedirectAttributes ra) {
+        try {
+            Usuario u = usuarioService.buscarPorEmail(principal.getName());
+            if (!foto.isEmpty()) {
+                Path dir = Paths.get("uploads");
+                Files.createDirectories(dir);
+                String nome = "user-" + u.getId() + "-" + System.currentTimeMillis() + "-" + foto.getOriginalFilename();
+                Path destino = dir.resolve(nome);
+                Files.copy(foto.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
+                u.setFotoPerfil("/uploads/" + nome);
+                usuarioService.salvarUsuarioSemTrocarSenha(u); // crie esse método que não re-encode a senha
+            }
+            ra.addFlashAttribute("ok", "Foto atualizada!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("erro", "Erro: " + e.getMessage());
+        }
+        return "redirect:/perfil";
+    }
+
+}

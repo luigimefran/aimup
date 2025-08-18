@@ -2,6 +2,17 @@
 <qualifiedTypeNameHistroy>
     <fullyQualifiedTypeName name="com.aimup.service.UsuarioDetailsService"/>
     <fullyQualifiedTypeName name="jakarta.servlet.http.HttpServletRequest"/>
-    <fullyQualifiedTypeName name="org.springframework.beans.factory.annotation.Autowired"/>
     <fullyQualifiedTypeName name="com.aimup.repository.UsuarioRepository"/>
+    <fullyQualifiedTypeName name="com.aimup.repository.GrupoMembrosRepository"/>
+    <fullyQualifiedTypeName name="org.springframework.beans.factory.annotation.Autowired"/>
+    <fullyQualifiedTypeName name="com.aimup.service.UsuarioService"/>
+    <fullyQualifiedTypeName name="java.time.LocalDate"/>
+    <fullyQualifiedTypeName name="java.time.LocalDateTime"/>
+    <fullyQualifiedTypeName name="org.springframework.web.bind.annotation.PostMapping"/>
+    <fullyQualifiedTypeName name="org.springframework.web.bind.annotation.RequestParam"/>
+    <fullyQualifiedTypeName name="org.springframework.web.multipart.MultipartFile"/>
+    <fullyQualifiedTypeName name="org.springframework.web.servlet.mvc.support.RedirectAttributes"/>
+    <fullyQualifiedTypeName name="jakarta.persistence.criteria.Path"/>
+    <fullyQualifiedTypeName name="com.aimup.repository.TarefaConclusaoRepository"/>
+    <fullyQualifiedTypeName name="com.aimup.service.TarefaService"/>
 </qualifiedTypeNameHistroy>

@@ -1,0 +1,69 @@
+@PostMapping("/criar")
+public String criar(@RequestParam String nome,
+                    @RequestParam(required = false) String metaTitulo,
+                    @RequestParam(required = false) String metaDescricao,
+                    @RequestParam(name = "tTitulo", required = false) List<String> tTitulos,
+                    @RequestParam(name = "tPontos", required = false) List<String> tPontos, // <- string
+                    @RequestParam(name = "tFreq", required = false)   List<String> tFreq,
+                    Principal principal,
+                    org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
+    try {
+        if (nome == null || nome.isBlank()) {
+            ra.addFlashAttribute("erro", "Informe o nome do grupo.");
+            return "redirect:/grupos/criar-form";
+        }
+
+        Usuario u = usuarioService.buscarPorEmail(principal.getName());
+
+        List<Tarefa> tarefas = new ArrayList<>();
+        if (tTitulos != null) {
+            for (int i = 0; i < tTitulos.size(); i++) {
+                String tt = tTitulos.get(i);
+                if (tt == null || tt.isBlank()) continue;
+
+                // pontos com fallback
+                Integer pts = 5;
+                if (tPontos != null && i < tPontos.size()) {
+                    try {
+                        String raw = tPontos.get(i);
+                        if (raw != null && !raw.isBlank()) {
+                            pts = Integer.parseInt(raw.trim());
+                            if (pts < 1) pts = 1;
+                        }
+                    } catch (Exception ignored) { /* mantém 5 */ }
+                }
+
+                // frequência com fallback
+                String f = (tFreq != null && i < tFreq.size() && tFreq.get(i) != null && !tFreq.get(i).isBlank())
+                        ? tFreq.get(i).trim().toUpperCase()
+                        : "SEMANAL";
+                Tarefa.Frequencia freq;
+                try {
+                    freq = Tarefa.Frequencia.valueOf(f);
+                } catch (Exception e) {
+                    freq = Tarefa.Frequencia.SEMANAL;
+                }
+
+                Tarefa t = new Tarefa();
+                t.setTitulo(tt.trim());
+                t.setDescricao(null);
+                t.setPontos(pts);
+                t.setFrequencia(freq);
+                t.setAtiva(true);
+                tarefas.add(t);
+            }
+        }
+
+        Grupo g = grupoService.criarGrupoComTarefas(nome.trim(), metaTitulo, metaDescricao, u, tarefas);
+        ra.addFlashAttribute("ok", "Grupo criado com sucesso!");
+        return "redirect:/grupos/" + g.getId();
+
+    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+        // Provavelmente nome duplicado (unique = true)
+        ra.addFlashAttribute("erro", "Já existe um grupo com esse nome. Tente outro.");
+        return "redirect:/grupos/criar-form";
+    } catch (Exception e) {
+        ra.addFlashAttribute("erro", "Erro ao criar grupo: " + e.getMessage());
+        return "redirect:/grupos/criar-form";
+    }
+}
