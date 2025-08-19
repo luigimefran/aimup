@@ -1,0 +1,593 @@
+package com.aimup;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class AimUpApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(AimUpApplication.class, args);
+    }
+
+	<!-- templates/index/index.html -->
+	<!DOCTYPE html>
+	<html xmlns:th="http://www.thymeleaf.org" lang="pt-br">
+	  <head>
+	    <meta charset="UTF-8" />
+	    <meta name="viewport" content="width=device-width, initial-scale=1" />
+	    <title>AimUp - Início</title>
+	
+	    <!-- Vendor CSS -->
+	    <link
+	      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+	      rel="stylesheet"
+	    />
+	    <link
+	      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+	      rel="stylesheet"
+	    />
+	    <link rel="shortcut icon" href="/img/LogoAimUp.png" type="image/x-icon" />
+	
+	    <!-- ====== HOME CSS (tudo aqui para você customizar) ====== -->
+	    <style>
+	      :root {
+	        --aimup-green: #23a86b;
+	        --aimup-green-600: #1b8a59;
+	        --aimup-green-dark: #0e4d3a;
+	        --aimup-ink: #0b3d2e;
+	        --card-bg: rgba(255, 255, 255, 0.1);
+	        --card-white: #ffffff;
+	      }
+	
+	      /* Fundo geral */
+	      body {
+	        background: linear-gradient(0deg, #6fbb96 0%, #23a86b 100%);
+	        min-height: 100vh;
+	        color: #fff;
+	        font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto,
+	          sans-serif;
+	      }
+	
+	      /* Cartões “glass” */
+	      .card {
+	        background: var(--card-bg);
+	        border: 0;
+	        border-radius: 20px;
+	        color: #fff;
+	        backdrop-filter: blur(6px);
+	        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+	      }
+	      .card.white {
+	        background: #fff;
+	        color: var(--aimup-ink);
+	      }
+	
+	      /* List items limpos */
+	      .list-group-item {
+	        border: 0;
+	        border-radius: 14px;
+	        margin-bottom: 10px;
+	        background: rgba(255, 255, 255, 0.92);
+	        color: #0d1b14;
+	      }
+	      .list-group-item .text-muted {
+	        opacity: 0.8;
+	      }
+	
+	      /* Progresso arredondado */
+	      .progress {
+	        height: 10px;
+	        border-radius: 999px;
+	        overflow: hidden;
+	      }
+	      .progress-bar {
+	        background: var(--aimup-green);
+	      }
+	
+	      /* Botões e inputs */
+	      .btn-outline-success {
+	        border-color: #fff;
+	        color: #fff;
+	      }
+	      .btn-outline-success:hover {
+	        background: #fff;
+	        color: var(--aimup-green);
+	      }
+	      .form-select,
+	      .form-control {
+	        border-radius: 12px;
+	      }
+	
+	      /* Cabeçalho/topbar */
+	      .topbar a,
+	      .topbar button {
+	        color: #fff;
+	      }
+	      .topbar .fa-user-circle {
+	        opacity: 0.95;
+	      }
+	
+	      /* Offcanvas lateral */
+	      .offcanvas-aimup {
+	        background-color: var(--aimup-green-dark) !important;
+	        color: #fff !important;
+	      }
+	      .offcanvas-aimup .offcanvas-title {
+	        color: #fff;
+	      }
+	      .offcanvas-aimup .btn-close {
+	        filter: invert(1);
+	      }
+	      .offcanvas-aimup .list-group-item {
+	        background: transparent;
+	        color: #fff;
+	        border-color: rgba(255, 255, 255, 0.12);
+	      }
+	      .offcanvas-aimup .list-group-item:hover {
+	        background: rgba(255, 255, 255, 0.08);
+	      }
+	
+	      /* Mini-aba do grupo */
+	      .mini-aba h6 {
+	        font-weight: 700;
+	      }
+	      .mini-aba .badge {
+	        font-weight: 600;
+	      }
+	
+	      /* Lembretes */
+	      .lembrete-item {
+	        background: #f9fafb;
+	        border: 1px solid #eef0f2;
+	        border-radius: 12px;
+	        padding: 0.75rem;
+	      }
+	
+	      /* Utilidades */
+	      .shadow-soft {
+	        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+	      }
+	      .rounded-20 {
+	        border-radius: 20px;
+	      }
+	    </style>
+	  </head>
+	  <body>
+	    <div class="container-fluid p-4">
+	      <!-- TOPBAR -->
+	      <div
+	        class="topbar d-flex justify-content-between align-items-center mb-4"
+	      >
+	        <button
+	          class="btn btn-link p-0"
+	          type="button"
+	          data-bs-toggle="offcanvas"
+	          data-bs-target="#mainMenu"
+	          aria-controls="mainMenu"
+	          title="Menu"
+	        >
+	          <i class="fas fa-bars fa-lg"></i>
+	        </button>
+	
+	        <h5 class="fw-bold mb-0">
+	          Bem-vindo(a), <span th:text="${usuario?.nome}">Usuário</span>
+	        </h5>
+	
+	        <a href="/perfil" title="Perfil">
+	          <i class="fas fa-user-circle fa-2x"></i>
+	        </a>
+	      </div>
+	
+	      <!-- FLASH (caso queira manter junto do toast) -->
+	      <div th:if="${ok}" class="alert alert-success" th:text="${ok}"></div>
+	      <div th:if="${erro}" class="alert alert-danger" th:text="${erro}"></div>
+	
+	      <!-- ===== MINI-ABA DO GRUPO SELECIONADO ===== -->
+	      <div
+	        th:if="${grupoSelecionado != null}"
+	        class="card p-4 mb-4 mini-aba shadow-soft"
+	      >
+	        <div
+	          class="d-flex justify-content-between flex-wrap align-items-center mb-3 gap-2"
+	        >
+	          <h5 class="mb-0">
+	            Grupo:
+	            <span
+	              class="text-warning fw-semibold"
+	              th:text="${grupoSelecionado.nome}"
+	              >Nome do Grupo</span
+	            >
+	          </h5>
+	
+	          <!-- Troca de grupo -->
+	          <form
+	            method="get"
+	            action="/inicio"
+	            class="d-flex align-items-center gap-2"
+	          >
+	            <label class="me-1">Trocar grupo:</label>
+	            <select
+	              name="grupoId"
+	              class="form-select"
+	              style="min-width: 220px"
+	              onchange="this.form.submit()"
+	              th:with="selId=${grupoSelecionado.id}"
+	            >
+	              <option
+	                th:each="g : ${grupos}"
+	                th:value="${g.id}"
+	                th:text="${g.nome}"
+	                th:selected="${g.id == selId}"
+	              >
+	                Grupo
+	              </option>
+	            </select>
+	          </form>
+	        </div>
+	
+	        <!-- Progresso -->
+	        <div class="mb-3">
+	          <div class="d-flex justify-content-between small mb-1">
+	            <span>Progresso</span>
+	            <span th:text="${progresso + '%'}">0%</span>
+	          </div>
+	          <div class="progress" role="progressbar" aria-label="Progresso">
+	            <div
+	              class="progress-bar"
+	              th:style="'width:' + ${progresso} + '%'"
+	            ></div>
+	          </div>
+	        </div>
+	
+	        <div class="row g-3">
+	          <!-- Top 3 -->
+	          <div class="col-lg-5">
+	            <div class="bg-white text-dark rounded-20 p-3 h-100">
+	              <h6 class="text-success mb-3">Top 3 do ranking</h6>
+	              <div th:if="${#lists.isEmpty(rankingTop3)}" class="text-muted">
+	                Sem pontuações ainda.
+	              </div>
+	              <ul
+	                class="list-group list-group-flush"
+	                th:if="${!#lists.isEmpty(rankingTop3)}"
+	              >
+	                <li
+	                  class="list-group-item d-flex align-items-center justify-content-between"
+	                  th:each="r,st : ${rankingTop3}"
+	                >
+	                  <div class="d-flex align-items-center gap-2">
+	                    <span
+	                      class="badge bg-success rounded-pill"
+	                      th:text="${st.index + 1}"
+	                      >1</span
+	                    >
+	                    <span th:text="${r.nome}">Pessoa</span>
+	                  </div>
+	                  <strong th:text="${r.pontos}">0</strong>
+	                </li>
+	              </ul>
+	            </div>
+	          </div>
+	
+	          <!-- Checklist -->
+	          <div class="col-lg-7">
+	            <div class="bg-white text-dark rounded-20 p-3">
+	              <div
+	                class="d-flex justify-content-between align-items-center mb-2"
+	              >
+	                <h6 class="text-success mb-0">Checklist de tarefas</h6>
+	                <a
+	                  class="btn btn-sm btn-outline-success"
+	                  th:href="@{|/tarefas/grupo/${grupoSelecionado.id}|}"
+	                >
+	                  Ver todas
+	                </a>
+	              </div>
+	
+	              <div
+	                th:if="${#lists.isEmpty(tarefasGrupoSelecionado)}"
+	                class="text-muted"
+	              >
+	                Sem tarefas ativas.
+	              </div>
+	
+	              <ul
+	                class="list-group"
+	                th:if="${!#lists.isEmpty(tarefasGrupoSelecionado)}"
+	              >
+	                <li
+	                  class="list-group-item d-flex justify-content-between align-items-center"
+	                  th:each="t : ${tarefasGrupoSelecionado}"
+	                >
+	                  <div class="me-3">
+	                    <strong th:text="${t.titulo}">Título</strong>
+	                    <small class="text-muted ms-2" th:text="${t.frequencia}"
+	                      >DIARIA</small
+	                    >
+	                    <div
+	                      class="text-muted small"
+	                      th:if="${t.descricao != null}"
+	                      th:text="${t.descricao}"
+	                    ></div>
+	                  </div>
+	
+	                  <!-- TOGGLE concluir/desmarcar direto da home -->
+	                  <form
+	                    th:action="@{|/tarefas/toggle/${t.id}|}"
+	                    method="post"
+	                    class="d-inline"
+	                  >
+	                    <!-- CSRF opcional (se não ignorar /tarefas/** no CSRF) -->
+	                    <input
+	                      type="hidden"
+	                      th:name="${_csrf.parameterName}"
+	                      th:value="${_csrf.token}"
+	                    />
+	                    <input
+	                      type="hidden"
+	                      name="grupoId"
+	                      th:value="${grupoSelecionado.id}"
+	                    />
+	                    <input type="hidden" name="from" value="home" />
+	                    <div class="form-check form-switch">
+	                      <input
+	                        class="form-check-input"
+	                        type="checkbox"
+	                        th:checked="${#lists.contains(concluidasPeriodo, t.id)}"
+	                        onchange="this.form.submit()"
+	                      />
+	                    </div>
+	                  </form>
+	                </li>
+	              </ul>
+	            </div>
+	          </div>
+	        </div>
+	      </div>
+	
+	      <!-- ===== COLUNAS: Meus Grupos + Lembretes ===== -->
+	      <div class="row g-4">
+	        <!-- Meus Grupos -->
+	        <div class="col-lg-8">
+	          <div class="card p-4">
+	            <div class="d-flex justify-content-between align-items-center mb-3">
+	              <h4 class="fw-bold mb-0">Meus Grupos</h4>
+	            </div>
+	
+	            <div
+	              th:if="${#lists.isEmpty(grupos)}"
+	              class="alert alert-light text-dark"
+	            >
+	              Você ainda não participa de nenhum grupo. Crie um novo grupo ou
+	              entre em um na página de
+	              <a th:href="@{/grupos}" class="alert-link">Grupos</a>.
+	            </div>
+	
+	            <ul class="list-group" th:if="${!#lists.isEmpty(grupos)}">
+	              <li
+	                class="list-group-item d-flex justify-content-between align-items-center"
+	                th:each="g : ${grupos}"
+	              >
+	                <div>
+	                  <strong th:text="${g.nome}">Nome do Grupo</strong><br />
+	                  <small class="text-muted"
+	                    >ID: <span th:text="${g.id}">1</span></small
+	                  >
+	                </div>
+	                <div class="d-flex flex-wrap gap-2">
+	                  <a
+	                    class="btn btn-outline-secondary"
+	                    th:href="@{|/grupos/${g.id}|}"
+	                    >Detalhes</a
+	                  >
+	                  <a
+	                    class="btn btn-success"
+	                    th:href="@{|/tarefas/grupo/${g.id}|}"
+	                    >Ver Tarefas</a
+	                  >
+	                  <a
+	                    class="btn btn-outline-primary"
+	                    th:href="@{|/grupos/${g.id}/chat|}"
+	                  >
+	                    <i class="fa-solid fa-comments me-1"></i> Chat
+	                  </a>
+	                </div>
+	              </li>
+	            </ul>
+	          </div>
+	        </div>
+	
+	        <!-- Lembretes -->
+	        <div class="col-lg-4">
+	          <div class="card p-4 white">
+	            <div class="d-flex justify-content-between align-items-center mb-2">
+	              <h5 class="fw-bold text-success mb-0">Lembretes</h5>
+	              <button
+	                class="btn btn-sm btn-outline-success"
+	                type="button"
+	                data-bs-toggle="collapse"
+	                data-bs-target="#lembreteFormWrap"
+	              >
+	                + Novo
+	              </button>
+	            </div>
+	
+	            <div id="lembreteFormWrap" class="collapse">
+	              <form th:action="@{/lembretes/salvar}" method="post" class="mb-3">
+	                <input
+	                  type="hidden"
+	                  th:name="${_csrf.parameterName}"
+	                  th:value="${_csrf.token}"
+	                />
+	                <div class="mb-2">
+	                  <label class="form-label">Título</label>
+	                  <input
+	                    type="text"
+	                    name="titulo"
+	                    class="form-control"
+	                    placeholder="Ex: Consulta médica"
+	                    required
+	                  />
+	                </div>
+	                <div class="mb-2">
+	                  <label class="form-label">Descrição</label>
+	                  <textarea
+	                    name="descricao"
+	                    class="form-control"
+	                    rows="2"
+	                    placeholder="Detalhes..."
+	                  ></textarea>
+	                </div>
+	                <div class="mb-3">
+	                  <label class="form-label">Data e hora</label>
+	                  <input
+	                    type="datetime-local"
+	                    name="dataHora"
+	                    class="form-control"
+	                    required
+	                  />
+	                </div>
+	                <button class="btn btn-success w-100">Salvar lembrete</button>
+	              </form>
+	              <hr />
+	            </div>
+	
+	            <div th:if="${#lists.isEmpty(lembretes)}" class="text-muted">
+	              Sem lembretes por enquanto.
+	            </div>
+	            <ul class="list-unstyled" th:if="${!#lists.isEmpty(lembretes)}">
+	              <li th:each="l : ${lembretes}" class="lembrete-item mb-3">
+	                <div class="d-flex justify-content-between align-items-start">
+	                  <div class="me-2">
+	                    <strong th:text="${l.titulo}">Título</strong><br />
+	                    <small class="text-muted" th:text="${l.descricao}"
+	                      >Descrição</small
+	                    ><br />
+	                    <small class="text-muted">
+	                      <i class="fa-regular fa-clock me-1"></i>
+	                      <span
+	                        th:text="${#temporals.format(l.dataHora, 'dd/MM/yyyy HH:mm')}"
+	                        >00/00/0000 00:00</span
+	                      >
+	                    </small>
+	                  </div>
+	                  <form
+	                    th:action="@{|/lembretes/${l.id}/excluir|}"
+	                    method="post"
+	                    class="ms-2"
+	                  >
+	                    <input
+	                      type="hidden"
+	                      th:name="${_csrf.parameterName}"
+	                      th:value="${_csrf.token}"
+	                    />
+	                    <button
+	                      class="btn btn-sm btn-outline-danger"
+	                      title="Excluir"
+	                    >
+	                      <i class="fa-solid fa-trash"></i>
+	                    </button>
+	                  </form>
+	                </div>
+	              </li>
+	            </ul>
+	          </div>
+	        </div>
+	      </div>
+	      <!-- /row -->
+	    </div>
+	    <!-- /container -->
+	
+	    <!-- MENU LATERAL -->
+	    <div
+	      class="offcanvas offcanvas-start offcanvas-aimup"
+	      tabindex="-1"
+	      id="mainMenu"
+	      aria-labelledby="mainMenuLabel"
+	    >
+	      <div class="offcanvas-header">
+	        <h5 class="offcanvas-title" id="mainMenuLabel">Menu</h5>
+	        <button
+	          type="button"
+	          class="btn-close"
+	          data-bs-dismiss="offcanvas"
+	          aria-label="Fechar"
+	        ></button>
+	      </div>
+	      <div class="offcanvas-body">
+	        <div class="list-group">
+	          <a
+	            class="list-group-item list-group-item-action d-flex align-items-center"
+	            href="/grupos"
+	          >
+	            <i class="fa-solid fa-users me-2"></i> Grupos
+	          </a>
+	          <a
+	            class="list-group-item list-group-item-action d-flex align-items-center"
+	            href="/chat"
+	          >
+	            <i class="fa-solid fa-comments me-2"></i> Chat
+	          </a>
+	        </div>
+	      </div>
+	    </div>
+	
+	    <!-- Toasts -->
+	    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+	      <div
+	        id="autoToast"
+	        class="toast"
+	        role="alert"
+	        aria-live="assertive"
+	        aria-atomic="true"
+	      >
+	        <div class="toast-header">
+	          <strong class="me-auto">AimUp</strong>
+	          <small>agora</small>
+	          <button
+	            type="button"
+	            class="btn-close"
+	            data-bs-dismiss="toast"
+	            aria-label="Close"
+	          ></button>
+	        </div>
+	        <div class="toast-body" id="toastBody">Ação realizada.</div>
+	      </div>
+	    </div>
+	
+	    <!-- Vendor JS -->
+	    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+	
+	    <!-- ====== HOME SCRIPT (tudo aqui para você customizar) ====== -->
+	    <script th:inline="javascript">
+	      // Toast automático (2s) com base em flash attributes
+	      document.addEventListener("DOMContentLoaded", function () {
+	        const ok = /*[[${ok}]]*/ null;
+	        const erro = /*[[${erro}]]*/ null;
+	        const toastEl = document.getElementById("autoToast");
+	        const toastBody = document.getElementById("toastBody");
+	        let msg = null;
+	
+	        if (typeof ok === "string") msg = ok;
+	        if (typeof erro === "string") msg = erro;
+	
+	        if (msg) {
+	          toastBody.textContent = msg;
+	          const t = new bootstrap.Toast(toastEl, { delay: 2000 });
+	          t.show();
+	        }
+	      });
+	
+	      // Exemplo: hook para estilizar progress-bar dinamicamente (opcional)
+	      (function () {
+	        const bars = document.querySelectorAll(".progress-bar");
+	        bars.forEach((b) => {
+	          const w = parseInt(b.style.width || "0");
+	          if (w >= 100) b.classList.add("bg-success");
+	        });
+	      })();
+	    </script>
+	  </body>
+	</html>
+	
+}
